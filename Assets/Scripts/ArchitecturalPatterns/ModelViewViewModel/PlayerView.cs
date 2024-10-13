@@ -18,6 +18,12 @@ namespace ArchitecturalPatterns.ModelViewViewModel
             viewModel.OnScoreChanged += UpdateScore;
         }
 
+        private void OnDestroy()
+        {
+            viewModel.OnHealthChanged -= UpdateHealth;
+            viewModel.OnScoreChanged -= UpdateScore;
+        }
+
         private void UpdateHealth()
         {
             healthText.text = "Health: " + viewModel.Health;
