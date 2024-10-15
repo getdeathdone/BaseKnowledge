@@ -8,14 +8,6 @@ namespace CreationalPatterns.Factory
         public abstract void Attack();
     }
 
-    public class Zombie : Enemy
-    {
-        public override void Attack()
-        {
-            Debug.Log("Zombie attacks!");
-        }
-    }
-
     public class Vampire : Enemy
     {
         public override void Attack()
@@ -24,19 +16,45 @@ namespace CreationalPatterns.Factory
         }
     }
 
-    public class EnemyFactory
+    public class Zombie : Enemy
     {
+        public override void Attack()
+        {
+            Debug.Log("Zombie attacks!");
+        }
+    }
+
+    public abstract class EnemyFactory
+    {
+        public abstract Enemy CreateEnemy();
+
         public static Enemy CreateEnemy(string type)
         {
             switch (type)
             {
-                case "Zombie":
-                    return new Zombie();
                 case "Vampire":
                     return new Vampire();
+                case "Zombie":
+                    return new Zombie();
                 default:
                     throw new Exception("Unknown enemy type");
             }
+        }
+    }
+
+    public class VampireFactory : EnemyFactory
+    {
+        public override Enemy CreateEnemy()
+        {
+            return new Vampire();
+        }
+    }
+
+    public class ZombieFactory : EnemyFactory
+    {
+        public override Enemy CreateEnemy()
+        {
+            return new Zombie();
         }
     }
 }
