@@ -9,16 +9,13 @@ namespace CreationalPatterns.Builder
             this.builder = builder;
         }
 
-        public void ConstructHouse()
+        public House ConstructHouse()
         {
             builder.BuildWindows();
             builder.BuildDoors();
             builder.BuildGarage();
             builder.BuildGarden();
-        }
 
-        public House GetHouse()
-        {
             return builder.GetHouse();
         }
     }

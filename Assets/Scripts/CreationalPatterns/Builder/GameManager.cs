@@ -9,8 +9,7 @@ namespace CreationalPatterns.Builder
             HouseBuilder builder = new StandardHouseBuilder();
             var director = new HouseDirector(builder);
 
-            director.ConstructHouse();
-            var house = director.GetHouse();
+            var house = director.ConstructHouse();
             house.Show();
         }
     }
