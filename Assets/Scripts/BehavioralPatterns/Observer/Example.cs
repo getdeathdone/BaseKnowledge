@@ -24,18 +24,18 @@ namespace BehavioralPatterns.Observer
 
         private void NotifyObservers()
         {
-            foreach (var observer in observers) observer.Update();
+            foreach (var observer in observers) observer.UpdateObserver();
         }
     }
 
     public interface IObserver
     {
-        void Update();
+        void UpdateObserver();
     }
 
     public class ConcreteObserver : MonoBehaviour, IObserver
     {
-        public void Update()
+        public void UpdateObserver()
         {
             Debug.Log("Observer notified of state change!");
         }
