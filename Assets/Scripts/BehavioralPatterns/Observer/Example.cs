@@ -40,7 +40,7 @@ namespace BehavioralPatterns.Observer
             Debug.Log("Observer notified of state change!");
         }
     }
-    
+
     public class ObserverExample : MonoBehaviour
     {
         private void Start()
