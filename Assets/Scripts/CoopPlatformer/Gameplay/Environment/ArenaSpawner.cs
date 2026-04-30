@@ -51,7 +51,16 @@ namespace CoopPlatformer.Gameplay.Environment
             var filter = go.AddComponent<MeshFilter>();
             filter.mesh = _quadMesh;
             var renderer = go.AddComponent<MeshRenderer>();
-            if (material != null) renderer.sharedMaterial = material;
+            
+            // Assign a default material if none provided to avoid the pink "missing material" look
+            if (material == null)
+            {
+                // Using Sprites-Default as a safe fallback for simple quads
+                material = Canvas.GetDefaultCanvasMaterial(); 
+                if (material == null) material = new Material(Shader.Find("Sprites/Default"));
+            }
+            
+            renderer.sharedMaterial = material;
             return go;
         }
 
