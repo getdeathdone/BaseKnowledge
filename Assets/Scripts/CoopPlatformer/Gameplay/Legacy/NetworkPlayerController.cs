@@ -4,10 +4,10 @@ using UnityEngine;
 
 namespace CoopPlatformer.Gameplay.Player
 {
-    /// <summary>
-    /// Synchronized 2D Player Controller.
-    /// Senior Tip: Server-authoritative physics avoids client-side rubber banding with NetworkTransform.
-    /// </summary>
+    
+    
+    
+    
     [RequireComponent(typeof(NetworkObject))]
     [RequireComponent(typeof(NetworkTransform))]
     [RequireComponent(typeof(Rigidbody2D))]
@@ -97,7 +97,7 @@ namespace CoopPlatformer.Gameplay.Player
 
         private bool IsGrounded()
         {
-            // Simple ground check logic
+            
             return Mathf.Abs(_rb.velocity.y) < 0.01f;
         }
     }

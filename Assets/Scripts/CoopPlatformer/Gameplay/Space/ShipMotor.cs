@@ -39,8 +39,8 @@ namespace CoopPlatformer.Gameplay.Space
                 ? moveInput * _config.MoveSpeed
                 : Vector2.zero;
 
-            // Use a smooth time derived from acceleration for a fluid feel.
-            // 4.0f factor ensures it doesn't snap too instantly but feels responsive.
+            
+            
             float smoothTime = Mathf.Clamp(4.0f / Mathf.Max(_config.Acceleration, 0.1f), 0.05f, 0.5f);
             
             _rb.velocity = Vector2.SmoothDamp(_rb.velocity, targetVelocity, ref _currentVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
@@ -55,8 +55,8 @@ namespace CoopPlatformer.Gameplay.Space
 
             float targetAngle = Mathf.Atan2(aimInput.y, aimInput.x) * Mathf.Rad2Deg - 90f;
             
-            // Use SmoothDampAngle for natural-feeling rotation with inertia
-            float smoothTime = 60f / _config.RotationSpeed; // Derived smooth time based on speed
+            
+            float smoothTime = 60f / _config.RotationSpeed; 
             float newAngle = Mathf.SmoothDampAngle(_rb.rotation, targetAngle, ref _rotationVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
             
             _rb.MoveRotation(newAngle);

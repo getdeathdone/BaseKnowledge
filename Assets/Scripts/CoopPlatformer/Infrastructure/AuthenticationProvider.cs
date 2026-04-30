@@ -6,10 +6,10 @@ using UnityEngine;
 
 namespace CoopPlatformer.Infrastructure
 {
-    /// <summary>
-    /// Handles Unity Services initialization and anonymous authentication.
-    /// Senior Tip: Use async/await (UniTask) for non-blocking initialization.
-    /// </summary>
+    
+    
+    
+    
     public static class AuthenticationProvider
     {
         public static bool IsAuthenticated => AuthenticationService.Instance.IsSignedIn;
@@ -40,7 +40,7 @@ namespace CoopPlatformer.Infrastructure
                 {
                     Debug.LogError($"[Auth] Inner Exception: {e.InnerException.Message}");
                 }
-                Debug.LogException(e); // Logs the full stack trace and details
+                Debug.LogException(e); 
                 return false;
             }
         }

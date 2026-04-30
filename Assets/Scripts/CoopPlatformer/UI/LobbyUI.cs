@@ -8,10 +8,10 @@ using System.Collections.Generic;
 
 namespace CoopPlatformer.UI
 {
-    /// <summary>
-    /// Simple UI controller for the Lobby.
-    /// Senior Tip: Keep UI thin and delegate logic to a Controller or Bootstrap.
-    /// </summary>
+    
+    
+    
+    
     public class LobbyUI : MonoBehaviour
     {
         [SerializeField] private NetworkBootstrap _bootstrap;

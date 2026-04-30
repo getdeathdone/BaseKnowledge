@@ -22,7 +22,7 @@ namespace CoopPlatformer.Gameplay.Space
         private readonly NetworkVariable<float> _networkArenaRadius = new(25f);
         private Camera _cam;
         
-        // Input state synced from client to server
+        
         private Vector2 _inputMove;
         private Vector2 _inputAim;
         private bool _isFiringRequested;
@@ -108,17 +108,17 @@ namespace CoopPlatformer.Gameplay.Space
             Vector2 aim = input.Aim;
             bool firing = input.Fire;
 
-            // 3. Send to Server
+            
             if (ShouldSendInput(move, aim, firing))
             {
-                // Removed quantization for better precision and smoothness
+                
                 UpdateInputServerRpc(move, aim, firing);
                 _lastSentMove = move;
                 _lastSentAim = aim;
                 _nextInputSendTime = Time.unscaledTime + _config.InputSendInterval;
             }
             
-            // 4. Local Camera Fallback
+            
             if (_cam != null && _cam.TryGetComponent<Gameplay.Player.CameraFollow>(out var follow))
             {
                 if (follow.Target == null) follow.SetTarget(transform);

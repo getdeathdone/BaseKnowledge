@@ -10,10 +10,10 @@ using UnityEngine;
 
 namespace CoopPlatformer.Core
 {
-    /// <summary>
-    /// Entry point for the network session. Orchestrates Auth -> Relay -> Lobby -> NGO.
-    /// Senior Tip: Use a state machine for connection management to handle edge cases (timeout, failure).
-    /// </summary>
+    
+    
+    
+    
     public class NetworkBootstrap : MonoBehaviour
     {
         [SerializeField] private string _lobbyName = "CoopRoom";
@@ -266,7 +266,7 @@ namespace CoopPlatformer.Core
                 networkManager.NetworkConfig.PlayerPrefab = registry.ShipPrefab.gameObject;
             }
 
-            // Register all gameplay prefabs if not already registered
+            
             AddPrefabIfNotExists(networkManager, registry.ShipPrefab?.gameObject);
             AddPrefabIfNotExists(networkManager, registry.ProjectilePrefab?.gameObject);
             AddPrefabIfNotExists(networkManager, registry.AsteroidPrefab?.gameObject);

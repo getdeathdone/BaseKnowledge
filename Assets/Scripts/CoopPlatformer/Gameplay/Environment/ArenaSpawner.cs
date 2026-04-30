@@ -3,11 +3,11 @@ using UnityEngine;
 
 namespace CoopPlatformer.Gameplay.Environment
 {
-    /// <summary>
-    /// Networked component that ensures the arena is generated for every client.
-    /// Senior Tip: Using a more generic Renderer search and dual-property color setting 
-    /// ensures compatibility with both standard and URP/HDRP pipelines.
-    /// </summary>
+    
+    
+    
+    
+    
     [RequireComponent(typeof(NetworkObject))]
     public class ArenaSpawner : NetworkBehaviour
     {
@@ -52,10 +52,10 @@ namespace CoopPlatformer.Gameplay.Environment
             filter.mesh = _quadMesh;
             var renderer = go.AddComponent<MeshRenderer>();
             
-            // Assign a default material if none provided to avoid the pink "missing material" look
+            
             if (material == null)
             {
-                // Using Sprites-Default as a safe fallback for simple quads
+                
                 material = Canvas.GetDefaultCanvasMaterial(); 
                 if (material == null) material = new Material(Shader.Find("Sprites/Default"));
             }
@@ -117,11 +117,11 @@ namespace CoopPlatformer.Gameplay.Environment
                 float scale = Random.Range(0.08f, 0.22f);
                 star.transform.localScale = new Vector3(scale, scale, 1f);
                 
-                // Robust Renderer Handling
+                
                 var rnd = star.GetComponentInChildren<Renderer>();
                 if (rnd != null)
                 {
-                    // Simple solid yellow as requested
+                    
                     Color color = Color.yellow;
 
                     rnd.GetPropertyBlock(_propBlock);
@@ -149,7 +149,7 @@ namespace CoopPlatformer.Gameplay.Environment
                 var rnd = marker.GetComponentInChildren<Renderer>();
                 if (rnd != null)
                 {
-                    // Restored: Light Blue / Cyan for boundaries
+                    
                     Color color = new Color(0.2f, 0.9f, 1f, 1f); 
                     rnd.GetPropertyBlock(_propBlock);
                     _propBlock.SetColor("_Color", color);

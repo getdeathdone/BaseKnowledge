@@ -9,13 +9,13 @@ using UnityEngine;
 
 namespace CoopPlatformer.Infrastructure
 {
-    /// <summary>
-    /// Manages Unity Relay allocations and transport configuration.
-    /// Senior Tip: Use ServerEndpoints to explicitly choose between 'udp' and 'dtls' (secure) connections.
-    /// </summary>
+    
+    
+    
+    
     public static class RelayProvider
     {
-        private const string ConnectionType = "udp"; // Use UDP for better compatibility during development
+        private const string ConnectionType = "udp"; 
 
         public static async UniTask<string> CreateRelayHostAsync(int maxConnections = 4, string region = null)
         {

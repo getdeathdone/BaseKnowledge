@@ -7,10 +7,10 @@ using UnityEngine;
 
 namespace CoopPlatformer.Infrastructure
 {
-    /// <summary>
-    /// Handles Lobby lifecycle and Relay integration.
-    /// Senior Tip: Implement heartbeats and cleanup to ensure lobby health.
-    /// </summary>
+    
+    
+    
+    
     public static class LobbyProvider
     {
         private const string RelayKey = "RelayJoinCode";
