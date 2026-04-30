@@ -179,6 +179,7 @@ namespace CoopPlatformer.Gameplay.Space
         {
             GameObject explosion = Instantiate(_config.CollisionExplosionPrefab, hitPosition, Quaternion.identity);
             explosion.SetActive(true);
+            Destroy(explosion, 2f);
         }
 
         public void QueueFireButtonShot()

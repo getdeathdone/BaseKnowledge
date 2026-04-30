@@ -33,9 +33,9 @@ namespace CoopPlatformer.Core
 
         public async UniTask<bool> StartHost()
         {
-            if (!ConfigurePlayerPrefab())
+            if (!ConfigureNetworkPrefabs())
             {
-                StatusChanged?.Invoke("Player prefab is not configured.");
+                StatusChanged?.Invoke("Network prefabs are not configured.");
                 return false;
             }
 
@@ -77,9 +77,9 @@ namespace CoopPlatformer.Core
 
         public async UniTask<bool> StartServerOnly()
         {
-            if (!ConfigurePlayerPrefab())
+            if (!ConfigureNetworkPrefabs())
             {
-                StatusChanged?.Invoke("Player prefab is not configured.");
+                StatusChanged?.Invoke("Network prefabs are not configured.");
                 return false;
             }
 
@@ -121,9 +121,9 @@ namespace CoopPlatformer.Core
 
         public async UniTask<bool> JoinRoom(string lobbyCode)
         {
-            if (!ConfigurePlayerPrefab())
+            if (!ConfigureNetworkPrefabs())
             {
-                StatusChanged?.Invoke("Player prefab is not configured.");
+                StatusChanged?.Invoke("Network prefabs are not configured.");
                 return false;
             }
 
@@ -176,9 +176,9 @@ namespace CoopPlatformer.Core
 
         public async UniTask<bool> JoinRoomById(string lobbyId)
         {
-            if (!ConfigurePlayerPrefab())
+            if (!ConfigureNetworkPrefabs())
             {
-                StatusChanged?.Invoke("Player prefab is not configured.");
+                StatusChanged?.Invoke("Network prefabs are not configured.");
                 return false;
             }
 
@@ -240,7 +240,7 @@ namespace CoopPlatformer.Core
             }
         }
 
-        private bool ConfigurePlayerPrefab()
+        private bool ConfigureNetworkPrefabs()
         {
             NetworkManager networkManager = NetworkManager.Singleton;
             if (networkManager == null)
@@ -250,14 +250,36 @@ namespace CoopPlatformer.Core
             }
 
             GameplayPrefabRegistry registry = GameplayPrefabRegistry.Instance;
-            if (registry == null || registry.ShipPrefab == null)
+            if (registry == null)
             {
-                Debug.LogError("[Bootstrap] GameplayPrefabRegistry or ShipPrefab is not configured.");
+                Debug.LogError("[Bootstrap] GameplayPrefabRegistry is not configured.");
                 return false;
             }
 
-            networkManager.NetworkConfig.PlayerPrefab = registry.ShipPrefab.gameObject;
+            if (registry.ShipPrefab != null)
+            {
+                networkManager.NetworkConfig.PlayerPrefab = registry.ShipPrefab.gameObject;
+            }
+
+            // Register all gameplay prefabs if not already registered
+            AddPrefabIfNotExists(networkManager, registry.ShipPrefab?.gameObject);
+            AddPrefabIfNotExists(networkManager, registry.ProjectilePrefab?.gameObject);
+            AddPrefabIfNotExists(networkManager, registry.AsteroidPrefab?.gameObject);
+
             return true;
+        }
+
+        private void AddPrefabIfNotExists(NetworkManager manager, GameObject prefab)
+        {
+            if (prefab == null) return;
+
+            var prefabsList = manager.NetworkConfig.Prefabs.Prefabs;
+            foreach (var networkPrefab in prefabsList)
+            {
+                if (networkPrefab.Prefab == prefab) return;
+            }
+
+            manager.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = prefab });
         }
     }
 }
