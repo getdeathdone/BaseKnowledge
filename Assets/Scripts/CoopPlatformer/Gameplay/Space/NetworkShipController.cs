@@ -12,11 +12,13 @@ namespace CoopPlatformer.Gameplay.Space
     [RequireComponent(typeof(ShipLocalInput))]
     [RequireComponent(typeof(ShipMotor))]
     [RequireComponent(typeof(ShipCombat))]
+    [RequireComponent(typeof(ShipColorizer))]
     public class NetworkShipController : NetworkBehaviour
     {
         private float _arenaRadius;
 
         private readonly NetworkVariable<int> _health = new(5);
+        private readonly NetworkVariable<int> _colorIndex = new(0);
         private readonly NetworkVariable<float> _networkArenaRadius = new(25f);
         private Camera _cam;
         
@@ -30,6 +32,7 @@ namespace CoopPlatformer.Gameplay.Space
         private ShipLocalInput _localInput;
         private ShipMotor _motor;
         private ShipCombat _combat;
+        private ShipColorizer _colorizer;
         private ShipConfig _config;
 
         private static readonly HashSet<NetworkShipController> ActiveShips = new HashSet<NetworkShipController>();
@@ -44,17 +47,20 @@ namespace CoopPlatformer.Gameplay.Space
             _localInput = GetComponent<ShipLocalInput>();
             _motor = GetComponent<ShipMotor>();
             _combat = GetComponent<ShipCombat>();
+            _colorizer = GetComponent<ShipColorizer>();
             _cam = Camera.main;
         }
 
         public override void OnNetworkSpawn()
         {
             ActiveShips.Add(this);
+            _colorIndex.OnValueChanged += OnColorIndexChanged;
             _networkArenaRadius.OnValueChanged += OnArenaRadiusChanged;
 
             if (IsServer)
             {
                 _health.Value = _config.MaxHealth;
+                _colorIndex.Value = ResolvePlayerColorIndex();
                 _networkArenaRadius.Value = ResolveArenaRadius();
                 _motor.ConfigureForServer();
                 transform.position = SpawnPointResolver.GetSpawnPosition(OwnerClientId);
@@ -69,12 +75,14 @@ namespace CoopPlatformer.Gameplay.Space
                 SetupCamera();
             }
 
+            _colorizer.ApplyColorIndex(_colorIndex.Value);
             ApplyArenaRadius(_networkArenaRadius.Value);
         }
 
         public override void OnNetworkDespawn()
         {
             ActiveShips.Remove(this);
+            _colorIndex.OnValueChanged -= OnColorIndexChanged;
             _networkArenaRadius.OnValueChanged -= OnArenaRadiusChanged;
         }
 
@@ -196,6 +204,11 @@ namespace CoopPlatformer.Gameplay.Space
             ApplyArenaRadius(newValue);
         }
 
+        private void OnColorIndexChanged(int previousValue, int newValue)
+        {
+            _colorizer.ApplyColorIndex(newValue);
+        }
+
         private void ApplyArenaRadius(float radius)
         {
             if (radius > 0f)
@@ -234,6 +247,11 @@ namespace CoopPlatformer.Gameplay.Space
             return new Vector2(
                 Mathf.Round(value.x / step) * step,
                 Mathf.Round(value.y / step) * step);
+        }
+
+        private int ResolvePlayerColorIndex()
+        {
+            return (int)(OwnerClientId % (ulong)_colorizer.ColorCount);
         }
     }
 }
