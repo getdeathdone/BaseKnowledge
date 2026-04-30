@@ -7,257 +7,194 @@ namespace CoopPlatformer.Gameplay.Space
     [RequireComponent(typeof(NetworkObject))]
     [RequireComponent(typeof(NetworkTransform))]
     [RequireComponent(typeof(Rigidbody2D))]
-    [RequireComponent(typeof(CircleCollider2D))]
     public class NetworkShipController : NetworkBehaviour
     {
-        [Header("Movement")]
-        [SerializeField] private float _moveSpeed = 8f;
-        [SerializeField] private float _rotationSpeed = 540f;
-        [SerializeField] private float _arenaRadius = 16f;
+        [Header("Movement Settings")]
+        [SerializeField] private float _moveSpeed = 12f;
+        [SerializeField] private float _rotationSpeed = 600f;
+        [SerializeField] private float _arenaRadius = 25f;
 
-        [Header("Combat")]
+        [Header("References")]
         [SerializeField] private NetworkProjectile _projectilePrefab;
         [SerializeField] private Transform _muzzle;
         [SerializeField] private Transform _visual;
-        [SerializeField] private float _fireCooldown = 0.2f;
-        [SerializeField] private int _maxHealth = 5;
 
         private readonly NetworkVariable<int> _health = new(5);
-        private Rigidbody2D _rigidbody2D;
-        private Camera _mainCamera;
-        private Vector2 _serverMoveInput;
-        private Vector2 _serverAimDirection = Vector2.up;
+        private Rigidbody2D _rb;
+        private Camera _cam;
+        
+        // Input state synced from client to server
+        private Vector2 _inputMove;
+        private Vector2 _inputAim;
+        private bool _isFiringRequested;
+        
         private float _lastFireTime;
 
         public int CurrentHealth => _health.Value;
-        public int MaxHealth => _maxHealth;
+        public int MaxHealth => 5;
 
         private void Awake()
         {
-            EnsureComponents();
+            _rb = GetComponent<Rigidbody2D>();
+            _cam = Camera.main;
         }
 
         public override void OnNetworkSpawn()
         {
-            EnsureComponents();
-            if (IsSpawnTemplate())
-            {
-                return;
-            }
-
-            EnableVisuals();
-            _muzzle = transform.Find("Muzzle");
-            _mainCamera = Camera.main;
-
             if (IsServer)
             {
-                _health.Value = _maxHealth;
+                _health.Value = 5;
+                _rb.simulated = true;
+                _rb.bodyType = RigidbodyType2D.Dynamic;
+                _rb.gravityScale = 0f;
+                _rb.drag = 2f;
+                _rb.angularDrag = 5f;
+                
                 transform.position = SpawnPointResolver.GetSpawnPosition(OwnerClientId);
             }
-
-            _rigidbody2D.gravityScale = 0f;
-            _rigidbody2D.drag = 4f;
-            _rigidbody2D.angularDrag = 8f;
-            _rigidbody2D.interpolation = RigidbodyInterpolation2D.Interpolate;
-
-            if (!IsServer)
+            else
             {
-                _rigidbody2D.bodyType = RigidbodyType2D.Kinematic;
-                _rigidbody2D.simulated = false;
+                // Clients don't run physics for remote or even local ships (server is authoritative)
+                _rb.simulated = false;
+                _rb.bodyType = RigidbodyType2D.Kinematic;
+            }
+
+            if (IsOwner)
+            {
+                SetupCamera();
+            }
+
+            if (_visual != null) _visual.gameObject.SetActive(true);
+        }
+
+        private void SetupCamera()
+        {
+            if (_cam == null) _cam = Camera.main;
+            if (_cam != null)
+            {
+                if (!_cam.TryGetComponent<Gameplay.Player.CameraFollow>(out var follow))
+                {
+                    follow = _cam.gameObject.AddComponent<Gameplay.Player.CameraFollow>();
+                }
+                follow.SetTarget(transform);
             }
         }
 
         private void Update()
         {
-            if (IsSpawnTemplate() || !IsOwner)
+            if (!IsOwner) return;
+
+            // 1. Gather Input (Keyboard/Mouse)
+            Vector2 move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+            Vector2 aim = transform.up;
+            bool firing = Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space);
+
+            // 2. Touch Input (Override if touching)
+            if (Input.touchCount > 0)
             {
-                return;
+                Touch t = Input.GetTouch(0);
+                if (_cam != null)
+                {
+                    Vector3 worldPos = _cam.ScreenToWorldPoint(new Vector3(t.position.x, t.position.y, 10f));
+                    worldPos.z = 0f;
+                    
+                    Vector2 toTouch = (Vector2)(worldPos - transform.position);
+                    
+                    // Move and Aim towards touch point
+                    if (toTouch.magnitude > 0.5f)
+                    {
+                        move = toTouch.normalized;
+                        aim = toTouch.normalized;
+                    }
+                    firing = true; // Auto-fire while touching
+                }
+            }
+            else if (move.sqrMagnitude < 0.01f && _cam != null)
+            {
+                // If not moving via keyboard, look at mouse
+                Vector3 mouseWorld = _cam.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10f));
+                mouseWorld.z = 0f;
+                aim = (mouseWorld - transform.position).normalized;
             }
 
-            var moveInput = ReadMoveInput();
-            var aimDirection = ReadAimDirection();
-            SubmitInputServerRpc(moveInput, aimDirection);
-
-            if (ShouldFire())
+            // 3. Send to Server
+            UpdateInputServerRpc(move, aim, firing);
+            
+            // 4. Local Camera Fallback
+            if (_cam != null && _cam.TryGetComponent<Gameplay.Player.CameraFollow>(out var follow))
             {
-                RequestFireServerRpc(aimDirection);
+                if (follow.Target == null) follow.SetTarget(transform);
             }
+        }
+
+        [ServerRpc]
+        private void UpdateInputServerRpc(Vector2 move, Vector2 aim, bool firing)
+        {
+            _inputMove = Vector2.ClampMagnitude(move, 1f);
+            if (aim.sqrMagnitude > 0.1f) _inputAim = aim.normalized;
+            _isFiringRequested = firing;
         }
 
         private void FixedUpdate()
         {
-            if (IsSpawnTemplate() || !IsServer)
+            if (!IsServer) return;
+
+            // Apply Movement
+            if (_inputMove.sqrMagnitude > 0.01f)
             {
-                return;
+                _rb.AddForce(_inputMove * _moveSpeed * 10f); // Use force for smoother feel with drag
             }
 
-            EnsureComponents();
-            _rigidbody2D.velocity = _serverMoveInput * _moveSpeed;
-
-            if (_serverAimDirection.sqrMagnitude > 0.001f)
+            // Apply Rotation
+            if (_inputAim.sqrMagnitude > 0.01f)
             {
-                var targetAngle = Mathf.Atan2(_serverAimDirection.y, _serverAimDirection.x) * Mathf.Rad2Deg - 90f;
-                var nextAngle = Mathf.MoveTowardsAngle(_rigidbody2D.rotation, targetAngle, _rotationSpeed * Time.fixedDeltaTime);
-                _rigidbody2D.MoveRotation(nextAngle);
+                float targetAngle = Mathf.Atan2(_inputAim.y, _inputAim.x) * Mathf.Rad2Deg - 90f;
+                float currentAngle = _rb.rotation;
+                float newAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, _rotationSpeed * Time.fixedDeltaTime);
+                _rb.MoveRotation(newAngle);
             }
 
-            ClampInsideArena();
+            // Shooting
+            if (_isFiringRequested)
+            {
+                TryFire();
+            }
+
+            // Constraints
+            if (_rb.position.magnitude > _arenaRadius)
+            {
+                _rb.position = _rb.position.normalized * _arenaRadius;
+                _rb.velocity *= 0.5f;
+            }
         }
 
-        [ServerRpc]
-        private void SubmitInputServerRpc(Vector2 moveInput, Vector2 aimDirection)
+        private void TryFire()
         {
-            _serverMoveInput = moveInput.sqrMagnitude > 1f ? moveInput.normalized : moveInput;
-            if (aimDirection.sqrMagnitude > 0.001f)
-            {
-                _serverAimDirection = aimDirection.normalized;
-            }
-        }
+            if (Time.time - _lastFireTime < 0.2f) return;
+            if (_projectilePrefab == null) return;
 
-        [ServerRpc]
-        private void RequestFireServerRpc(Vector2 aimDirection)
-        {
-            if (_projectilePrefab == null)
-            {
-                return;
-            }
+            // Check alignment
+            float angle = Vector2.Angle(transform.up, _inputAim);
+            if (angle > 20f) return; // Wait until rotated
 
-            if (Time.time - _lastFireTime < _fireCooldown)
-            {
-                return;
-            }
-
-            Vector2 direction = aimDirection.sqrMagnitude > 0.001f ? aimDirection.normalized : (Vector2)transform.up;
-            Vector3 spawnPosition = _muzzle != null
-                ? _muzzle.position
-                : transform.position + new Vector3(direction.x, direction.y, 0f) * 0.9f;
-
-            var angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
-            var projectile = Instantiate(_projectilePrefab, spawnPosition, Quaternion.Euler(0f, 0f, angle));
-            if (projectile == null)
-            {
-                return;
-            }
-
-            projectile.gameObject.SetActive(true);
-            projectile.Initialize(direction, OwnerClientId);
-
-            var networkObject = projectile.GetComponent<NetworkObject>();
-            if (networkObject == null)
-            {
-                Destroy(projectile.gameObject);
-                return;
-            }
-
-            networkObject.Spawn(true);
             _lastFireTime = Time.time;
+            
+            Vector3 spawnPos = _muzzle != null ? _muzzle.position : transform.position + transform.up * 0.8f;
+            var proj = Instantiate(_projectilePrefab, spawnPos, transform.rotation);
+            proj.gameObject.SetActive(true);
+            proj.Initialize(transform.up, OwnerClientId);
+            proj.GetComponent<NetworkObject>().Spawn(true);
         }
 
-        public void TakeDamage(int damage)
+        public void TakeDamage(int amount)
         {
-            if (!IsServer)
+            if (!IsServer) return;
+            _health.Value -= amount;
+            if (_health.Value <= 0)
             {
-                return;
-            }
-
-            _health.Value = Mathf.Max(0, _health.Value - damage);
-            if (_health.Value == 0)
-            {
-                _health.Value = _maxHealth;
-                transform.position = SpawnPointResolver.GetSpawnPosition(OwnerClientId);
-                _rigidbody2D.velocity = Vector2.zero;
-                _serverMoveInput = Vector2.zero;
-                _serverAimDirection = Vector2.up;
-            }
-        }
-
-        private Vector2 ReadMoveInput()
-        {
-            if (Input.touchCount > 0)
-            {
-                var touch = Input.GetTouch(0);
-                if (_mainCamera != null)
-                {
-                    Vector3 world = _mainCamera.ScreenToWorldPoint(touch.position);
-                    Vector2 delta = new Vector2(world.x - transform.position.x, world.y - transform.position.y);
-                    return delta.sqrMagnitude > 0.25f ? delta.normalized : Vector2.zero;
-                }
-            }
-
-            return new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-        }
-
-        private Vector2 ReadAimDirection()
-        {
-            if (Input.touchCount > 0)
-            {
-                var touch = Input.GetTouch(0);
-                if (_mainCamera != null)
-                {
-                    Vector3 world = _mainCamera.ScreenToWorldPoint(touch.position);
-                    Vector2 delta = new Vector2(world.x - transform.position.x, world.y - transform.position.y);
-                    if (delta.sqrMagnitude > 0.01f)
-                    {
-                        return delta.normalized;
-                    }
-                }
-            }
-
-            if (_mainCamera != null)
-            {
-                Vector3 mouseWorld = _mainCamera.ScreenToWorldPoint(Input.mousePosition);
-                Vector2 delta = new Vector2(mouseWorld.x - transform.position.x, mouseWorld.y - transform.position.y);
-                if (delta.sqrMagnitude > 0.01f)
-                {
-                    return delta.normalized;
-                }
-            }
-
-            return transform.up;
-        }
-
-        private bool ShouldFire()
-        {
-            if (Input.touchCount > 0)
-            {
-                return true;
-            }
-
-            return Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space);
-        }
-
-        private void ClampInsideArena()
-        {
-            var position = _rigidbody2D.position;
-            if (position.magnitude <= _arenaRadius)
-            {
-                return;
-            }
-
-            _rigidbody2D.position = position.normalized * _arenaRadius;
-            _rigidbody2D.velocity = Vector2.zero;
-        }
-
-        private void EnableVisuals()
-        {
-            _visual.gameObject.SetActive(true);
-        }
-
-        private bool IsSpawnTemplate()
-        {
-            return transform.parent != null && transform.parent.name == "GeneratedPrefabs";
-        }
-
-        private void EnsureComponents()
-        {
-            if (_rigidbody2D == null)
-            {
-                _rigidbody2D = GetComponent<Rigidbody2D>();
-            }
-
-            if (_mainCamera == null)
-            {
-                _mainCamera = Camera.main;
+                _health.Value = 5;
+                _rb.position = SpawnPointResolver.GetSpawnPosition(OwnerClientId);
+                _rb.velocity = Vector2.zero;
             }
         }
     }

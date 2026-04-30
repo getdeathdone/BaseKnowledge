@@ -10,10 +10,13 @@ namespace CoopPlatformer.Gameplay.Player
     {
         [Header("Settings")]
         [SerializeField] private float _smoothSpeed = 0.125f;
-        [SerializeField] private Vector2 _offset = new Vector2(0f, 2f);
+        [SerializeField] private Vector2 _offset = new Vector2(0f, 0f); // Reset offset for space shooter by default
         [SerializeField] private float _zDepth = -10f;
 
         private Transform _target;
+
+        // Public property to check current target from other scripts
+        public Transform Target => _target;
 
         public void SetTarget(Transform target)
         {

@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 8167258915371468662}
   - component: {fileID: 8902805057941338926}
   - component: {fileID: 4127717430880475402}
-  - component: {fileID: 5998735540534552307}
   m_Layer: 0
   m_Name: Pod01Ad
   m_TagString: Wall
@@ -60,11 +59,6 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -86,11 +80,9 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!64 &4127717430880475402
 MeshCollider:
@@ -114,19 +106,6 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 1520851962625047593, guid: caba7623bc1b9d943961fcd839c039e0, type: 3}
---- !u!114 &5998735540534552307
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3914772716115383559}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4d418356930d5a545acfde88147ad48a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  eff: {fileID: 2433282508537954060, guid: 3ef3ae421f71c5c4e97fe12dc2fc6312, type: 3}
 --- !u!1 &6851722243963365403
 GameObject:
   m_ObjectHideFlags: 0
