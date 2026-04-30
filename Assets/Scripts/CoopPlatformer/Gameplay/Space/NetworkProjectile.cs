@@ -13,6 +13,7 @@ namespace CoopPlatformer.Gameplay.Space
         [SerializeField] private float _speed = 18f;
         [SerializeField] private float _lifeTime = 2.5f;
         [SerializeField] private int _damage = 1;
+        [SerializeField] private GameObject _visual;
 
         private Rigidbody2D _rigidbody2D;
         private Vector2 _direction = Vector2.up;
@@ -116,11 +117,7 @@ namespace CoopPlatformer.Gameplay.Space
 
         private void EnableVisuals()
         {
-            var renderers = GetComponentsInChildren<Renderer>(true);
-            foreach (var renderer in renderers)
-            {
-                renderer.enabled = true;
-            }
+            _visual.SetActive(true);
         }
 
         private bool IsSpawnTemplate()

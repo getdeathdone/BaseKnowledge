@@ -21,11 +21,28 @@ namespace CoopPlatformer.Gameplay.Player
         {
             _rb = GetComponent<Rigidbody2D>();
             
-            // Only enable movement for the local player
-            if (!IsOwner)
+            // Only enable movement and camera follow for the local player
+            if (IsOwner)
+            {
+                SetupCameraFollow();
+            }
+            else
             {
                 _rb.bodyType = RigidbodyType2D.Kinematic; // Disable physics for remote players to avoid jitter
             }
+        }
+
+        private void SetupCameraFollow()
+        {
+            var mainCamera = Camera.main;
+            if (mainCamera == null) return;
+
+            if (!mainCamera.TryGetComponent<CameraFollow>(out var follow))
+            {
+                follow = mainCamera.gameObject.AddComponent<CameraFollow>();
+            }
+
+            follow.SetTarget(transform);
         }
 
         private void Update()

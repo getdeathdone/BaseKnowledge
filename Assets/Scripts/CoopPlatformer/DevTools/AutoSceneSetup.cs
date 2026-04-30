@@ -66,10 +66,15 @@ namespace CoopPlatformer.DevTools
             }
 
             camera.orthographic = true;
-            camera.orthographicSize = 12f;
+            camera.orthographicSize = 6f; // Tighter for a platformer
             camera.transform.position = new Vector3(0f, 0f, -10f);
-            camera.backgroundColor = new Color(0.03f, 0.04f, 0.1f);
+            camera.backgroundColor = new Color(0.15f, 0.17f, 0.25f); // Soft slate blue for sky
             camera.clearFlags = CameraClearFlags.SolidColor;
+
+            if (!camera.TryGetComponent<Gameplay.Player.CameraFollow>(out var follow))
+            {
+                camera.gameObject.AddComponent<Gameplay.Player.CameraFollow>();
+            }
         }
 
         private void SetupArena()

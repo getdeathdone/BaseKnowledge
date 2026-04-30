@@ -18,6 +18,7 @@ namespace CoopPlatformer.Gameplay.Space
         [Header("Combat")]
         [SerializeField] private NetworkProjectile _projectilePrefab;
         [SerializeField] private Transform _muzzle;
+        [SerializeField] private Transform _visual;
         [SerializeField] private float _fireCooldown = 0.2f;
         [SerializeField] private int _maxHealth = 5;
 
@@ -239,11 +240,7 @@ namespace CoopPlatformer.Gameplay.Space
 
         private void EnableVisuals()
         {
-            var renderers = GetComponentsInChildren<Renderer>(true);
-            foreach (var renderer in renderers)
-            {
-                renderer.enabled = true;
-            }
+            _visual.gameObject.SetActive(true);
         }
 
         private bool IsSpawnTemplate()
