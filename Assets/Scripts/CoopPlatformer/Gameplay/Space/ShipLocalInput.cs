@@ -33,7 +33,7 @@ namespace CoopPlatformer.Gameplay.Space
 
         public ShipInputSnapshot Read(Camera gameplayCamera, Vector3 shipPosition, Vector2 currentAim)
         {
-            bool pointerOverUi = Input.touchCount > 0 ? false : IsPointerOverUi();
+            bool pointerOverUi = IsPointerOverUi();
 
             Vector2 move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             Vector2 aim = currentAim;
@@ -57,7 +57,8 @@ namespace CoopPlatformer.Gameplay.Space
                     }
                 }
             }
-            else if (move.sqrMagnitude < 0.01f && gameplayCamera != null && !pointerOverUi && !_isFireButtonPressed)
+            // Fallback for mouse/keyboard on non-mobile platforms
+            else if (Input.touchCount == 0 && move.sqrMagnitude < 0.01f && gameplayCamera != null && !pointerOverUi && !_isFireButtonPressed && !Application.isMobilePlatform)
             {
                 Vector3 mouseWorld = gameplayCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10f));
                 mouseWorld.z = 0f;
@@ -114,6 +115,12 @@ namespace CoopPlatformer.Gameplay.Space
             for (int i = 0; i < Input.touchCount; i++)
             {
                 Touch touch = Input.GetTouch(i);
+
+                if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
+                {
+                    continue;
+                }
+
                 if (touch.fingerId == _fireButtonFingerId)
                 {
                     continue;
