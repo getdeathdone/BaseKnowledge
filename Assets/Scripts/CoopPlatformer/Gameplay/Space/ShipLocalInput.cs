@@ -20,11 +20,11 @@ namespace CoopPlatformer.Gameplay.Space
     public class ShipLocalInput : MonoBehaviour
     {
         private const int UnassignedFingerId = int.MinValue;
+        private ShipConfig _config;
+        private int _fireButtonFingerId = UnassignedFingerId;
 
         private bool _fireButtonQueued;
         private bool _isFireButtonPressed;
-        private int _fireButtonFingerId = UnassignedFingerId;
-        private ShipConfig _config;
 
         private void Awake()
         {
@@ -33,43 +33,45 @@ namespace CoopPlatformer.Gameplay.Space
 
         public ShipInputSnapshot Read(Camera gameplayCamera, Vector3 shipPosition, Vector2 currentAim)
         {
-            bool pointerOverUi = IsPointerOverUi();
+            var pointerOverUi = IsPointerOverUi();
 
-            Vector2 move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-            Vector2 aim = currentAim;
-            bool fire = _fireButtonQueued || Input.GetKeyDown(KeyCode.Space);
+            var move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+            var aim = currentAim;
+            var fire = _fireButtonQueued || Input.GetKeyDown(KeyCode.Space);
 
-            
-            if (TryGetGameplayTouch(out Touch gameplayTouch))
+
+            if (TryGetGameplayTouch(out var gameplayTouch))
             {
                 if (gameplayCamera != null)
                 {
-                    Vector3 worldPos = gameplayCamera.ScreenToWorldPoint(new Vector3(gameplayTouch.position.x, gameplayTouch.position.y, 10f));
+                    var worldPos =
+                        gameplayCamera.ScreenToWorldPoint(new Vector3(gameplayTouch.position.x,
+                            gameplayTouch.position.y, 10f));
                     worldPos.z = 0f;
 
-                    Vector2 toTouch = (Vector2)(worldPos - shipPosition);
-                    float distance = toTouch.magnitude;
+                    var toTouch = (Vector2)(worldPos - shipPosition);
+                    var distance = toTouch.magnitude;
                     if (distance > _config.TouchMoveDeadZone)
                     {
-                        Vector2 direction = toTouch / distance;
-                        float throttle = Mathf.Clamp01((distance - _config.TouchMoveDeadZone) / (_config.TouchMoveMaxDistance - _config.TouchMoveDeadZone));
+                        var direction = toTouch / distance;
+                        var throttle = Mathf.Clamp01((distance - _config.TouchMoveDeadZone) /
+                                                     (_config.TouchMoveMaxDistance - _config.TouchMoveDeadZone));
                         move = direction * throttle;
                         aim = toTouch.normalized;
                     }
                 }
             }
-            
-            else if (Input.touchCount == 0 && gameplayCamera != null && !pointerOverUi && !_isFireButtonPressed && !Application.isMobilePlatform)
+
+            else if (Input.touchCount == 0 && gameplayCamera != null && !pointerOverUi && !_isFireButtonPressed &&
+                     !Application.isMobilePlatform)
             {
-                Vector3 mouseWorld = gameplayCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10f));
+                var mouseWorld =
+                    gameplayCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10f));
                 mouseWorld.z = 0f;
-                Vector2 directionToMouse = (Vector2)(mouseWorld - shipPosition);
-                if (directionToMouse.sqrMagnitude > 0.001f)
-                {
-                    aim = directionToMouse.normalized;
-                }
+                var directionToMouse = (Vector2)(mouseWorld - shipPosition);
+                if (directionToMouse.sqrMagnitude > 0.001f) aim = directionToMouse.normalized;
             }
-            
+
             else if (move.sqrMagnitude > 0.01f)
             {
                 aim = move.normalized;
@@ -92,20 +94,13 @@ namespace CoopPlatformer.Gameplay.Space
 
         private bool IsPointerOverUi()
         {
-            if (EventSystem.current == null)
-            {
-                return false;
-            }
+            if (EventSystem.current == null) return false;
 
             if (Input.touchCount > 0)
             {
-                for (int i = 0; i < Input.touchCount; i++)
-                {
+                for (var i = 0; i < Input.touchCount; i++)
                     if (EventSystem.current.IsPointerOverGameObject(Input.GetTouch(i).fingerId))
-                    {
                         return true;
-                    }
-                }
 
                 return false;
             }
@@ -117,29 +112,18 @@ namespace CoopPlatformer.Gameplay.Space
         {
             gameplayTouch = default;
 
-            if (_isFireButtonPressed && Input.touchCount == 1)
+            if (_isFireButtonPressed && Input.touchCount == 1) return false;
+
+            for (var i = 0; i < Input.touchCount; i++)
             {
-                return false;
-            }
+                var touch = Input.GetTouch(i);
 
-            for (int i = 0; i < Input.touchCount; i++)
-            {
-                Touch touch = Input.GetTouch(i);
+                if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled) continue;
 
-                if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
-                {
-                    continue;
-                }
+                if (touch.fingerId == _fireButtonFingerId) continue;
 
-                if (touch.fingerId == _fireButtonFingerId)
-                {
-                    continue;
-                }
-
-                if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject(touch.fingerId))
-                {
-                    continue;
-                }
+                if (EventSystem.current != null &&
+                    EventSystem.current.IsPointerOverGameObject(touch.fingerId)) continue;
 
                 gameplayTouch = touch;
                 return true;

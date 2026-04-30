@@ -5,8 +5,9 @@ namespace CoopPlatformer.Core.Configuration
 {
     public class GameplayPrefabRegistry : MonoBehaviour
     {
-        [Header("Network Prefabs")]
-        [SerializeField] private NetworkShipController _shipPrefab;
+        [Header("Network Prefabs")] [SerializeField]
+        private NetworkShipController _shipPrefab;
+
         [SerializeField] private NetworkProjectile _projectilePrefab;
         [SerializeField] private AsteroidController _asteroidPrefab;
 
@@ -23,10 +24,7 @@ namespace CoopPlatformer.Core.Configuration
 
         private void OnDestroy()
         {
-            if (Instance == this)
-            {
-                Instance = null;
-            }
+            if (Instance == this) Instance = null;
         }
     }
 }

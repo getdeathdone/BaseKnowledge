@@ -1,23 +1,20 @@
+using System.Collections.Generic;
 using CoopPlatformer.Core;
 using Cysharp.Threading.Tasks;
 using TMPro;
 using Unity.Services.Lobbies.Models;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections.Generic;
 
 namespace CoopPlatformer.UI
 {
-    
-    
-    
-    
     public class LobbyUI : MonoBehaviour
     {
         [SerializeField] private NetworkBootstrap _bootstrap;
-        
-        [Header("UI Elements")]
-        [SerializeField] private TMP_InputField _joinCodeInput;
+
+        [Header("UI Elements")] [SerializeField]
+        private TMP_InputField _joinCodeInput;
+
         [SerializeField] private Button _hostButton;
         [SerializeField] private Button _clientButton;
         [SerializeField] private Button _hostClientButton;
@@ -32,14 +29,8 @@ namespace CoopPlatformer.UI
             _hostButton.onClick.AddListener(() => OnHostOnlyClicked().Forget());
             _clientButton.onClick.AddListener(() => OnClientClicked().Forget());
             _hostClientButton.onClick.AddListener(() => OnHostClientClicked().Forget());
-            if (_refreshButton != null)
-            {
-                _refreshButton.onClick.AddListener(() => OnRefreshClicked().Forget());
-            }
-            if (_bootstrap != null)
-            {
-                _bootstrap.StatusChanged += HandleStatusChanged;
-            }
+            if (_refreshButton != null) _refreshButton.onClick.AddListener(() => OnRefreshClicked().Forget());
+            if (_bootstrap != null) _bootstrap.StatusChanged += HandleStatusChanged;
 
             HandleStatusChanged("Host creates a room. Join uses Lobby Code.");
             ClearRoomList();
@@ -47,10 +38,7 @@ namespace CoopPlatformer.UI
 
         private void OnDestroy()
         {
-            if (_bootstrap != null)
-            {
-                _bootstrap.StatusChanged -= HandleStatusChanged;
-            }
+            if (_bootstrap != null) _bootstrap.StatusChanged -= HandleStatusChanged;
         }
 
         private async UniTaskVoid OnHostOnlyClicked()
@@ -58,10 +46,7 @@ namespace CoopPlatformer.UI
             SetLoading(true);
             try
             {
-                if (await _bootstrap.StartServerOnly())
-                {
-                    gameObject.SetActive(false);
-                }
+                if (await _bootstrap.StartServerOnly()) gameObject.SetActive(false);
             }
             finally
             {
@@ -74,10 +59,7 @@ namespace CoopPlatformer.UI
             SetLoading(true);
             try
             {
-                if (await _bootstrap.StartHost())
-                {
-                    gameObject.SetActive(false);
-                }
+                if (await _bootstrap.StartHost()) gameObject.SetActive(false);
             }
             finally
             {
@@ -87,16 +69,13 @@ namespace CoopPlatformer.UI
 
         private async UniTaskVoid OnClientClicked()
         {
-            string code = _joinCodeInput.text.Trim().ToUpperInvariant();
+            var code = _joinCodeInput.text.Trim().ToUpperInvariant();
             if (string.IsNullOrEmpty(code)) return;
 
             SetLoading(true);
             try
             {
-                if (await _bootstrap.JoinRoom(code))
-                {
-                    gameObject.SetActive(false);
-                }
+                if (await _bootstrap.JoinRoom(code)) gameObject.SetActive(false);
             }
             finally
             {
@@ -110,18 +89,12 @@ namespace CoopPlatformer.UI
             _hostButton.interactable = !isLoading;
             _clientButton.interactable = !isLoading;
             _hostClientButton.interactable = !isLoading;
-            if (_refreshButton != null)
-            {
-                _refreshButton.interactable = !isLoading;
-            }
+            if (_refreshButton != null) _refreshButton.interactable = !isLoading;
         }
 
         private void HandleStatusChanged(string message)
         {
-            if (_statusLabel != null)
-            {
-                _statusLabel.text = message;
-            }
+            if (_statusLabel != null) _statusLabel.text = message;
         }
 
         private async UniTaskVoid OnRefreshClicked()
@@ -140,15 +113,9 @@ namespace CoopPlatformer.UI
 
         private void ClearRoomList()
         {
-            if (_roomListRoot == null)
-            {
-                return;
-            }
+            if (_roomListRoot == null) return;
 
-            for (var i = _roomListRoot.childCount - 1; i >= 0; i--)
-            {
-                Destroy(_roomListRoot.GetChild(i).gameObject);
-            }
+            for (var i = _roomListRoot.childCount - 1; i >= 0; i--) Destroy(_roomListRoot.GetChild(i).gameObject);
 
             if (_roomListEmptyLabel != null)
             {
@@ -160,29 +127,17 @@ namespace CoopPlatformer.UI
         private void RenderRoomList(List<Lobby> rooms)
         {
             ClearRoomList();
-            if (_roomListRoot == null)
-            {
-                return;
-            }
+            if (_roomListRoot == null) return;
 
             if (rooms == null || rooms.Count == 0)
             {
-                if (_roomListEmptyLabel != null)
-                {
-                    _roomListEmptyLabel.text = "No public rooms found.";
-                }
+                if (_roomListEmptyLabel != null) _roomListEmptyLabel.text = "No public rooms found.";
                 return;
             }
 
-            if (_roomListEmptyLabel != null)
-            {
-                _roomListEmptyLabel.gameObject.SetActive(false);
-            }
+            if (_roomListEmptyLabel != null) _roomListEmptyLabel.gameObject.SetActive(false);
 
-            foreach (var room in rooms)
-            {
-                CreateRoomEntry(room);
-            }
+            foreach (var room in rooms) CreateRoomEntry(room);
         }
 
         private void CreateRoomEntry(Lobby room)
@@ -216,13 +171,15 @@ namespace CoopPlatformer.UI
             infoLayout.flexibleWidth = 1f;
             infoLayout.minWidth = 180f;
 
-            var joinButton = CreateActionButton("Join", new Color(0.95f, 0.45f, 0.22f), row.transform, new Vector2(72f, 34f));
+            var joinButton = CreateActionButton("Join", new Color(0.95f, 0.45f, 0.22f), row.transform,
+                new Vector2(72f, 34f));
             joinButton.onClick.AddListener(() => JoinRoomFromList(room.Id).Forget());
         }
 
         private Button CreateActionButton(string label, Color color, Transform parent, Vector2 size)
         {
-            var buttonObject = new GameObject(label + "Button", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            var buttonObject = new GameObject(label + "Button", typeof(RectTransform), typeof(Image), typeof(Button),
+                typeof(LayoutElement));
             buttonObject.transform.SetParent(parent, false);
 
             var image = buttonObject.GetComponent<Image>();
@@ -254,10 +211,7 @@ namespace CoopPlatformer.UI
             SetLoading(true);
             try
             {
-                if (await _bootstrap.JoinRoomById(lobbyId))
-                {
-                    gameObject.SetActive(false);
-                }
+                if (await _bootstrap.JoinRoomById(lobbyId)) gameObject.SetActive(false);
             }
             finally
             {

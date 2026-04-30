@@ -1,16 +1,13 @@
 using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using Unity.Services.Authentication;
 using Unity.Services.Lobbies;
 using Unity.Services.Lobbies.Models;
 using UnityEngine;
 
 namespace CoopPlatformer.Infrastructure
 {
-    
-    
-    
-    
     public static class LobbyProvider
     {
         private const string RelayKey = "RelayJoinCode";
@@ -30,10 +27,10 @@ namespace CoopPlatformer.Infrastructure
                 };
 
                 _currentLobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayers, options);
-                
+
                 _heartbeatGeneration++;
                 _ = SendHeartbeatAsync(_currentLobby.Id, _heartbeatGeneration);
-                
+
                 Debug.Log($"[Lobby] Created: {_currentLobby.Name} ({_currentLobby.Id})");
                 return _currentLobby;
             }
@@ -81,14 +78,14 @@ namespace CoopPlatformer.Infrastructure
                     Count = maxResults,
                     Filters = new List<QueryFilter>
                     {
-                        new QueryFilter(
-                            field: QueryFilter.FieldOptions.AvailableSlots,
+                        new(
+                            QueryFilter.FieldOptions.AvailableSlots,
                             op: QueryFilter.OpOptions.GT,
                             value: "0")
                     },
                     Order = new List<QueryOrder>
                     {
-                        new QueryOrder(false, QueryOrder.FieldOptions.Created)
+                        new(false, QueryOrder.FieldOptions.Created)
                     }
                 };
 
@@ -105,7 +102,6 @@ namespace CoopPlatformer.Infrastructure
         private static async UniTaskVoid SendHeartbeatAsync(string lobbyId, int generation)
         {
             while (_currentLobby != null && _currentLobby.Id == lobbyId && generation == _heartbeatGeneration)
-            {
                 try
                 {
                     await LobbyService.Instance.SendHeartbeatPingAsync(lobbyId);
@@ -116,7 +112,6 @@ namespace CoopPlatformer.Infrastructure
                     Debug.LogError($"[Lobby] Heartbeat failed: {e.Message}");
                     break;
                 }
-            }
         }
 
         public static async UniTask LeaveLobbyAsync()
@@ -126,7 +121,7 @@ namespace CoopPlatformer.Infrastructure
             try
             {
                 _heartbeatGeneration++;
-                string playerId = Unity.Services.Authentication.AuthenticationService.Instance.PlayerId;
+                var playerId = AuthenticationService.Instance.PlayerId;
                 await LobbyService.Instance.RemovePlayerAsync(_currentLobby.Id, playerId);
                 _currentLobby = null;
             }

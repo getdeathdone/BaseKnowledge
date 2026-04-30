@@ -5,8 +5,11 @@ namespace CoopPlatformer.Gameplay.Space
     [RequireComponent(typeof(Rigidbody2D))]
     public class ShipMotor : MonoBehaviour
     {
-        private Rigidbody2D _rb;
         private ShipConfig _config;
+
+        private Vector2 _currentVelocity;
+        private Rigidbody2D _rb;
+        private float _rotationVelocity;
 
         private void Awake()
         {
@@ -30,44 +33,36 @@ namespace CoopPlatformer.Gameplay.Space
             _rb.bodyType = RigidbodyType2D.Kinematic;
         }
 
-        private Vector2 _currentVelocity;
-        private float _rotationVelocity;
-
         public void ApplyMovement(Vector2 moveInput)
         {
-            Vector2 targetVelocity = moveInput.sqrMagnitude > 0.01f
+            var targetVelocity = moveInput.sqrMagnitude > 0.01f
                 ? moveInput * _config.MoveSpeed
                 : Vector2.zero;
 
-            
-            
-            float smoothTime = Mathf.Clamp(4.0f / Mathf.Max(_config.Acceleration, 0.1f), 0.05f, 0.5f);
-            
-            _rb.velocity = Vector2.SmoothDamp(_rb.velocity, targetVelocity, ref _currentVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
+
+            var smoothTime = Mathf.Clamp(4.0f / Mathf.Max(_config.Acceleration, 0.1f), 0.05f, 0.5f);
+
+            _rb.velocity = Vector2.SmoothDamp(_rb.velocity, targetVelocity, ref _currentVelocity, smoothTime,
+                Mathf.Infinity, Time.fixedDeltaTime);
         }
 
         public void ApplyRotation(Vector2 aimInput)
         {
-            if (aimInput.sqrMagnitude <= 0.01f)
-            {
-                return;
-            }
+            if (aimInput.sqrMagnitude <= 0.01f) return;
 
-            float targetAngle = Mathf.Atan2(aimInput.y, aimInput.x) * Mathf.Rad2Deg - 90f;
-            
-            
-            float smoothTime = 60f / _config.RotationSpeed; 
-            float newAngle = Mathf.SmoothDampAngle(_rb.rotation, targetAngle, ref _rotationVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
-            
+            var targetAngle = Mathf.Atan2(aimInput.y, aimInput.x) * Mathf.Rad2Deg - 90f;
+
+
+            var smoothTime = 60f / _config.RotationSpeed;
+            var newAngle = Mathf.SmoothDampAngle(_rb.rotation, targetAngle, ref _rotationVelocity, smoothTime,
+                Mathf.Infinity, Time.fixedDeltaTime);
+
             _rb.MoveRotation(newAngle);
         }
 
         public void ClampToRadius(float radius)
         {
-            if (_rb.position.magnitude <= radius)
-            {
-                return;
-            }
+            if (_rb.position.magnitude <= radius) return;
 
             _rb.position = _rb.position.normalized * radius;
             _rb.velocity *= 0.5f;

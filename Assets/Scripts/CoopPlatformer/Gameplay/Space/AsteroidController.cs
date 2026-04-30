@@ -1,7 +1,7 @@
+using System.Collections.Generic;
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
-using System.Collections.Generic;
 
 namespace CoopPlatformer.Gameplay.Space
 {
@@ -11,9 +11,8 @@ namespace CoopPlatformer.Gameplay.Space
     [RequireComponent(typeof(CircleCollider2D))]
     public class AsteroidController : NetworkBehaviour
     {
+        private static readonly HashSet<AsteroidController> ActiveAsteroids = new();
         [SerializeField] private int _health = 1;
-
-        private static readonly HashSet<AsteroidController> ActiveAsteroids = new HashSet<AsteroidController>();
         private Rigidbody2D _rigidbody2D;
         private Vector2 _velocity;
         public static int ActiveCount => ActiveAsteroids.Count;
@@ -23,23 +22,36 @@ namespace CoopPlatformer.Gameplay.Space
             EnsureComponents();
         }
 
+        private void FixedUpdate()
+        {
+            if (!IsServer || IsSpawnTemplate()) return;
+
+            EnsureComponents();
+            _rigidbody2D.velocity = _velocity;
+        }
+
+        private void OnTriggerEnter2D(Collider2D other)
+        {
+            if (!IsServer) return;
+
+            var ship = other.GetComponentInParent<NetworkShipController>();
+            if (ship == null) return;
+
+            ship.TakeDamage(1, transform.position);
+            Despawn();
+        }
+
         public void Initialize(Vector2 velocity, float angularVelocity)
         {
             _velocity = velocity;
             transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
-            if (_rigidbody2D != null)
-            {
-                _rigidbody2D.angularVelocity = angularVelocity;
-            }
+            if (_rigidbody2D != null) _rigidbody2D.angularVelocity = angularVelocity;
         }
 
         public override void OnNetworkSpawn()
         {
             EnsureComponents();
-            if (IsSpawnTemplate())
-            {
-                return;
-            }
+            if (IsSpawnTemplate()) return;
 
             ActiveAsteroids.Add(this);
             _rigidbody2D.gravityScale = 0f;
@@ -57,58 +69,20 @@ namespace CoopPlatformer.Gameplay.Space
             ActiveAsteroids.Remove(this);
         }
 
-        private void FixedUpdate()
-        {
-            if (!IsServer || IsSpawnTemplate())
-            {
-                return;
-            }
-
-            EnsureComponents();
-            _rigidbody2D.velocity = _velocity;
-        }
-
         public void TakeHit(int damage)
         {
-            if (!IsServer)
-            {
-                return;
-            }
+            if (!IsServer) return;
 
             _health -= damage;
-            if (_health <= 0)
-            {
-                Despawn();
-            }
-        }
-
-        private void OnTriggerEnter2D(Collider2D other)
-        {
-            if (!IsServer)
-            {
-                return;
-            }
-
-            var ship = other.GetComponentInParent<NetworkShipController>();
-            if (ship == null)
-            {
-                return;
-            }
-
-            ship.TakeDamage(1, transform.position);
-            Despawn();
+            if (_health <= 0) Despawn();
         }
 
         private void Despawn()
         {
             if (NetworkObject != null && NetworkObject.IsSpawned)
-            {
-                NetworkObject.Despawn(true);
-            }
+                NetworkObject.Despawn();
             else
-            {
                 Destroy(gameObject);
-            }
         }
 
         private bool IsSpawnTemplate()
@@ -118,10 +92,7 @@ namespace CoopPlatformer.Gameplay.Space
 
         private void EnsureComponents()
         {
-            if (_rigidbody2D == null)
-            {
-                _rigidbody2D = GetComponent<Rigidbody2D>();
-            }
+            if (_rigidbody2D == null) _rigidbody2D = GetComponent<Rigidbody2D>();
         }
     }
 }

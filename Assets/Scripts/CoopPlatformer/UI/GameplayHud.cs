@@ -5,6 +5,7 @@ using CoopPlatformer.Gameplay.Space;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -21,10 +22,7 @@ namespace CoopPlatformer.UI
 
         private void Awake()
         {
-            if (_fireButton != null)
-            {
-                ConfigureFireButtonEvents(_fireButton);
-            }
+            if (_fireButton != null) ConfigureFireButtonEvents(_fireButton);
 
             SetFireButtonVisible(false);
         }
@@ -40,8 +38,9 @@ namespace CoopPlatformer.UI
                 return;
             }
 
-            NetworkShipController[] ships = NetworkShipController.Ships
-                .Where(ship => ship != null && ship.IsSpawned && ship.NetworkObject != null && ship.NetworkObject.IsPlayerObject)
+            var ships = NetworkShipController.Ships
+                .Where(ship =>
+                    ship != null && ship.IsSpawned && ship.NetworkObject != null && ship.NetworkObject.IsPlayerObject)
                 .OrderBy(ship => ship.OwnerClientId)
                 .ToArray();
 
@@ -90,25 +89,21 @@ namespace CoopPlatformer.UI
 
         private void SetPlayersLabel(string value)
         {
-            if (_playersLabel != null)
-            {
-                _playersLabel.text = value;
-            }
+            if (_playersLabel != null) _playersLabel.text = value;
         }
 
         private void SetHealthLabel(string value)
         {
-            if (_healthLabel != null)
-            {
-                _healthLabel.text = value;
-            }
+            if (_healthLabel != null) _healthLabel.text = value;
         }
 
         private void OnFireButtonPointerDown(BaseEventData eventData)
         {
             if (_ownerShip != null)
             {
-                int pointerId = eventData is PointerEventData pointerEventData ? pointerEventData.pointerId : int.MinValue;
+                var pointerId = eventData is PointerEventData pointerEventData
+                    ? pointerEventData.pointerId
+                    : int.MinValue;
                 _ownerShip.SetFireButtonPressed(true, pointerId);
                 _ownerShip.QueueFireButtonShot();
             }
@@ -116,27 +111,19 @@ namespace CoopPlatformer.UI
 
         private void OnFireButtonPointerUp(BaseEventData eventData)
         {
-            if (_ownerShip != null)
-            {
-                _ownerShip.SetFireButtonPressed(false);
-            }
+            if (_ownerShip != null) _ownerShip.SetFireButtonPressed(false);
         }
 
         private void SetFireButtonVisible(bool isVisible)
         {
             if (_fireButtonRoot != null && _fireButtonRoot.activeSelf != isVisible)
-            {
                 _fireButtonRoot.SetActive(isVisible);
-            }
         }
 
         private void ConfigureFireButtonEvents(Button fireButton)
         {
-            EventTrigger trigger = fireButton.GetComponent<EventTrigger>();
-            if (trigger == null)
-            {
-                trigger = fireButton.gameObject.AddComponent<EventTrigger>();
-            }
+            var trigger = fireButton.GetComponent<EventTrigger>();
+            if (trigger == null) trigger = fireButton.gameObject.AddComponent<EventTrigger>();
 
             trigger.triggers ??= new List<EventTrigger.Entry>();
             trigger.triggers.Clear();
@@ -146,9 +133,10 @@ namespace CoopPlatformer.UI
             AddEventTrigger(trigger, EventTriggerType.PointerExit, OnFireButtonPointerUp);
         }
 
-        private static void AddEventTrigger(EventTrigger trigger, EventTriggerType eventType, UnityEngine.Events.UnityAction<BaseEventData> callback)
+        private static void AddEventTrigger(EventTrigger trigger, EventTriggerType eventType,
+            UnityAction<BaseEventData> callback)
         {
-            EventTrigger.Entry entry = new EventTrigger.Entry { eventID = eventType };
+            var entry = new EventTrigger.Entry { eventID = eventType };
             entry.callback.AddListener(callback);
             trigger.triggers.Add(entry);
         }

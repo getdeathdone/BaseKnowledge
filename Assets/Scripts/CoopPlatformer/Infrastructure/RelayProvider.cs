@@ -4,18 +4,13 @@ using Cysharp.Threading.Tasks;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Unity.Services.Relay;
-using Unity.Services.Relay.Models;
 using UnityEngine;
 
 namespace CoopPlatformer.Infrastructure
 {
-    
-    
-    
-    
     public static class RelayProvider
     {
-        private const string ConnectionType = "udp"; 
+        private const string ConnectionType = "udp";
 
         public static async UniTask<string> CreateRelayHostAsync(int maxConnections = 4, string region = null)
         {
@@ -25,10 +20,10 @@ namespace CoopPlatformer.Infrastructure
                     ? "[Relay] Requesting allocation with automatic region."
                     : $"[Relay] Requesting allocation in {region}.");
 
-                Allocation allocation = string.IsNullOrEmpty(region)
+                var allocation = string.IsNullOrEmpty(region)
                     ? await RelayService.Instance.CreateAllocationAsync(maxConnections)
                     : await RelayService.Instance.CreateAllocationAsync(maxConnections, region);
-                
+
                 if (allocation == null)
                 {
                     Debug.LogError("[Relay] Allocation failed: Server returned null.");
@@ -37,7 +32,7 @@ namespace CoopPlatformer.Infrastructure
 
                 Debug.Log($"[Relay] Allocation successful (ID: {allocation.AllocationId}). Requesting Join Code...");
 
-                string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+                var joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
                 if (string.IsNullOrEmpty(joinCode))
                 {
@@ -58,8 +53,7 @@ namespace CoopPlatformer.Infrastructure
                     (ushort)endpoint.Port,
                     allocation.AllocationIdBytes,
                     allocation.Key,
-                    allocation.ConnectionData,
-                    ConnectionType == "dtls"
+                    allocation.ConnectionData
                 );
 
                 Debug.Log($"[Relay] Host created via {ConnectionType}. Join Code: {joinCode}");
@@ -82,7 +76,7 @@ namespace CoopPlatformer.Infrastructure
         {
             try
             {
-                JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+                var joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
                 var endpoint = joinAllocation.ServerEndpoints.First(e => e.ConnectionType == ConnectionType);
 
                 var utp = NetworkManager.Singleton.GetComponent<UnityTransport>();
@@ -98,8 +92,7 @@ namespace CoopPlatformer.Infrastructure
                     joinAllocation.AllocationIdBytes,
                     joinAllocation.Key,
                     joinAllocation.ConnectionData,
-                    joinAllocation.HostConnectionData,
-                    ConnectionType == "dtls"
+                    joinAllocation.HostConnectionData
                 );
 
                 Debug.Log($"[Relay] Joined allocation via {ConnectionType} with code: {joinCode}");

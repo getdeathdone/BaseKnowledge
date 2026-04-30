@@ -1,7 +1,7 @@
+using CoopPlatformer.Core.Configuration;
+using CoopPlatformer.Gameplay.Environment;
 using Unity.Netcode;
 using UnityEngine;
-using CoopPlatformer.Gameplay.Environment;
-using CoopPlatformer.Core.Configuration;
 
 namespace CoopPlatformer.Gameplay.Space
 {
@@ -15,29 +15,11 @@ namespace CoopPlatformer.Gameplay.Space
 
         private float _nextSpawnTime;
 
-        public override void OnNetworkSpawn()
-        {
-            if (IsServer)
-            {
-                ArenaSpawner arenaSpawner = FindObjectOfType<ArenaSpawner>();
-                if (arenaSpawner != null)
-                {
-                    _arenaRadius = arenaSpawner.CurrentRadius;
-                }
-            }
-        }
-
         private void Update()
         {
-            if (!IsServer)
-            {
-                return;
-            }
+            if (!IsServer) return;
 
-            if (Time.time < _nextSpawnTime)
-            {
-                return;
-            }
+            if (Time.time < _nextSpawnTime) return;
 
             if (AsteroidController.ActiveCount >= _maxAsteroids)
             {
@@ -49,13 +31,19 @@ namespace CoopPlatformer.Gameplay.Space
             _nextSpawnTime = Time.time + _spawnInterval;
         }
 
+        public override void OnNetworkSpawn()
+        {
+            if (IsServer)
+            {
+                var arenaSpawner = FindObjectOfType<ArenaSpawner>();
+                if (arenaSpawner != null) _arenaRadius = arenaSpawner.CurrentRadius;
+            }
+        }
+
         private void SpawnAsteroid()
         {
-            AsteroidController asteroidPrefab = GameplayPrefabRegistry.Instance.AsteroidPrefab;
-            if (asteroidPrefab == null)
-            {
-                return;
-            }
+            var asteroidPrefab = GameplayPrefabRegistry.Instance.AsteroidPrefab;
+            if (asteroidPrefab == null) return;
 
             var angle = Random.Range(0f, Mathf.PI * 2f);
             var spawnPosition = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * _arenaRadius;

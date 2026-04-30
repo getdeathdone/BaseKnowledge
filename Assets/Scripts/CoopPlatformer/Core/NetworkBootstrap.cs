@@ -1,24 +1,17 @@
-using Cysharp.Threading.Tasks;
-using CoopPlatformer.Infrastructure;
-using CoopPlatformer.Gameplay.Space;
-using CoopPlatformer.Core.Configuration;
 using System;
 using System.Collections.Generic;
-using Unity.Services.Lobbies.Models;
+using CoopPlatformer.Core.Configuration;
+using CoopPlatformer.Infrastructure;
+using Cysharp.Threading.Tasks;
 using Unity.Netcode;
+using Unity.Services.Lobbies.Models;
 using UnityEngine;
 
 namespace CoopPlatformer.Core
 {
-    
-    
-    
-    
     public class NetworkBootstrap : MonoBehaviour
     {
         [SerializeField] private string _lobbyName = "CoopRoom";
-
-        public event Action<string> StatusChanged;
         private bool _createdLobbyAsHost;
 
         private void Awake()
@@ -26,15 +19,17 @@ namespace CoopPlatformer.Core
             Application.targetFrameRate = 60;
         }
 
+        private void OnDestroy()
+        {
+            CleanupSessionAsync().Forget();
+        }
+
         private void OnApplicationQuit()
         {
             CleanupSessionAsync().Forget();
         }
 
-        private void OnDestroy()
-        {
-            CleanupSessionAsync().Forget();
-        }
+        public event Action<string> StatusChanged;
 
         public async UniTask<bool> StartHost()
         {
@@ -52,7 +47,7 @@ namespace CoopPlatformer.Core
             }
 
             StatusChanged?.Invoke("Creating relay...");
-            string relayCode = await RelayProvider.CreateRelayHostAsync();
+            var relayCode = await RelayProvider.CreateRelayHostAsync();
             if (string.IsNullOrEmpty(relayCode))
             {
                 StatusChanged?.Invoke("Relay creation failed.");
@@ -96,7 +91,7 @@ namespace CoopPlatformer.Core
             }
 
             StatusChanged?.Invoke("Creating relay...");
-            string relayCode = await RelayProvider.CreateRelayHostAsync();
+            var relayCode = await RelayProvider.CreateRelayHostAsync();
             if (string.IsNullOrEmpty(relayCode))
             {
                 StatusChanged?.Invoke("Relay creation failed.");
@@ -140,7 +135,7 @@ namespace CoopPlatformer.Core
             }
 
             StatusChanged?.Invoke("Joining lobby...");
-            string relayCode = await LobbyProvider.JoinLobbyByCodeAsync(lobbyCode);
+            var relayCode = await LobbyProvider.JoinLobbyByCodeAsync(lobbyCode);
             if (string.IsNullOrEmpty(relayCode))
             {
                 StatusChanged?.Invoke("Lobby join failed.");
@@ -195,7 +190,7 @@ namespace CoopPlatformer.Core
             }
 
             StatusChanged?.Invoke("Joining room...");
-            string relayCode = await LobbyProvider.JoinLobbyByIdAsync(lobbyId);
+            var relayCode = await LobbyProvider.JoinLobbyByIdAsync(lobbyId);
             if (string.IsNullOrEmpty(relayCode))
             {
                 StatusChanged?.Invoke("Room join failed.");
@@ -222,10 +217,7 @@ namespace CoopPlatformer.Core
 
         private async UniTaskVoid CleanupSessionAsync()
         {
-            if (!Application.isPlaying)
-            {
-                return;
-            }
+            if (!Application.isPlaying) return;
 
             try
             {
@@ -247,26 +239,23 @@ namespace CoopPlatformer.Core
 
         private bool ConfigureNetworkPrefabs()
         {
-            NetworkManager networkManager = NetworkManager.Singleton;
+            var networkManager = NetworkManager.Singleton;
             if (networkManager == null)
             {
                 Debug.LogError("[Bootstrap] NetworkManager.Singleton is missing.");
                 return false;
             }
 
-            GameplayPrefabRegistry registry = GameplayPrefabRegistry.Instance;
+            var registry = GameplayPrefabRegistry.Instance;
             if (registry == null)
             {
                 Debug.LogError("[Bootstrap] GameplayPrefabRegistry is not configured.");
                 return false;
             }
 
-            if (registry.ShipPrefab != null)
-            {
-                networkManager.NetworkConfig.PlayerPrefab = registry.ShipPrefab.gameObject;
-            }
+            if (registry.ShipPrefab != null) networkManager.NetworkConfig.PlayerPrefab = registry.ShipPrefab.gameObject;
 
-            
+
             AddPrefabIfNotExists(networkManager, registry.ShipPrefab?.gameObject);
             AddPrefabIfNotExists(networkManager, registry.ProjectilePrefab?.gameObject);
             AddPrefabIfNotExists(networkManager, registry.AsteroidPrefab?.gameObject);
@@ -280,9 +269,8 @@ namespace CoopPlatformer.Core
 
             var prefabsList = manager.NetworkConfig.Prefabs.Prefabs;
             foreach (var networkPrefab in prefabsList)
-            {
-                if (networkPrefab.Prefab == prefab) return;
-            }
+                if (networkPrefab.Prefab == prefab)
+                    return;
 
             manager.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = prefab });
         }
