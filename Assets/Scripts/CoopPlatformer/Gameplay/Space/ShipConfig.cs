@@ -14,6 +14,7 @@ namespace CoopPlatformer.Gameplay.Space
         [SerializeField] private int _maxHealth = 5;
         [SerializeField] private float _fireInterval = 0.2f;
         [SerializeField] private float _maxFireAngle = 20f;
+        [SerializeField] private GameObject _collisionExplosionPrefab;
 
         [Header("Input")]
         [SerializeField] private float _touchMoveDeadZone = 0.6f;
@@ -31,6 +32,7 @@ namespace CoopPlatformer.Gameplay.Space
         public int MaxHealth => _maxHealth;
         public float FireInterval => _fireInterval;
         public float MaxFireAngle => _maxFireAngle;
+        public GameObject CollisionExplosionPrefab => _collisionExplosionPrefab;
         public float TouchMoveDeadZone => _touchMoveDeadZone;
         public float TouchMoveMaxDistance => _touchMoveMaxDistance;
         public float InputSendInterval => _inputSendInterval;

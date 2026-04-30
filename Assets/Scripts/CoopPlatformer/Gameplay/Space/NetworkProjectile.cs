@@ -93,7 +93,7 @@ namespace CoopPlatformer.Gameplay.Space
                 return;
             }
 
-            var ship = other.GetComponent<NetworkShipController>();
+            var ship = other.GetComponentInParent<NetworkShipController>();
             if (ship != null && ship.OwnerClientId != _ownerClientId)
             {
                 ship.TakeDamage(_damage);

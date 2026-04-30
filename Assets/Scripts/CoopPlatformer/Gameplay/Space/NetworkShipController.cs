@@ -143,6 +143,18 @@ namespace CoopPlatformer.Gameplay.Space
             _motor.ClampToRadius(_arenaRadius);
         }
 
+        public void TakeDamage(int amount, Vector3 hitPosition)
+        {
+            if (!IsServer) return;
+            ShowCollisionExplosionClientRpc(hitPosition);
+            _health.Value -= amount;
+            if (_health.Value <= 0)
+            {
+                _health.Value = _config.MaxHealth;
+                _motor.ResetTo(SpawnPointResolver.GetSpawnPosition(OwnerClientId));
+            }
+        }
+
         public void TakeDamage(int amount)
         {
             if (!IsServer) return;
@@ -152,6 +164,13 @@ namespace CoopPlatformer.Gameplay.Space
                 _health.Value = _config.MaxHealth;
                 _motor.ResetTo(SpawnPointResolver.GetSpawnPosition(OwnerClientId));
             }
+        }
+
+        [ClientRpc]
+        private void ShowCollisionExplosionClientRpc(Vector3 hitPosition)
+        {
+            GameObject explosion = Instantiate(_config.CollisionExplosionPrefab, hitPosition, Quaternion.identity);
+            explosion.SetActive(true);
         }
 
         public void QueueFireButtonShot()

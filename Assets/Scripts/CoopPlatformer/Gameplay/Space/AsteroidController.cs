@@ -89,13 +89,13 @@ namespace CoopPlatformer.Gameplay.Space
                 return;
             }
 
-            var ship = other.GetComponent<NetworkShipController>();
+            var ship = other.GetComponentInParent<NetworkShipController>();
             if (ship == null)
             {
                 return;
             }
 
-            ship.TakeDamage(1);
+            ship.TakeDamage(1, transform.position);
             Despawn();
         }
 
