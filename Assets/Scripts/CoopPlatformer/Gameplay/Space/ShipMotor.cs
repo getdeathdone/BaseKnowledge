@@ -30,14 +30,20 @@ namespace CoopPlatformer.Gameplay.Space
             _rb.bodyType = RigidbodyType2D.Kinematic;
         }
 
+        private Vector2 _currentVelocity;
+        private float _rotationVelocity;
+
         public void ApplyMovement(Vector2 moveInput)
         {
             Vector2 targetVelocity = moveInput.sqrMagnitude > 0.01f
                 ? moveInput * _config.MoveSpeed
                 : Vector2.zero;
 
-            float rate = moveInput.sqrMagnitude > 0.01f ? _config.Acceleration : _config.Deceleration;
-            _rb.velocity = Vector2.MoveTowards(_rb.velocity, targetVelocity, rate * Time.fixedDeltaTime);
+            // Use a smooth time derived from acceleration for a fluid feel.
+            // 4.0f factor ensures it doesn't snap too instantly but feels responsive.
+            float smoothTime = Mathf.Clamp(4.0f / Mathf.Max(_config.Acceleration, 0.1f), 0.05f, 0.5f);
+            
+            _rb.velocity = Vector2.SmoothDamp(_rb.velocity, targetVelocity, ref _currentVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
         }
 
         public void ApplyRotation(Vector2 aimInput)
@@ -48,7 +54,11 @@ namespace CoopPlatformer.Gameplay.Space
             }
 
             float targetAngle = Mathf.Atan2(aimInput.y, aimInput.x) * Mathf.Rad2Deg - 90f;
-            float newAngle = Mathf.MoveTowardsAngle(_rb.rotation, targetAngle, _config.RotationSpeed * Time.fixedDeltaTime);
+            
+            // Use SmoothDampAngle for natural-feeling rotation with inertia
+            float smoothTime = 60f / _config.RotationSpeed; // Derived smooth time based on speed
+            float newAngle = Mathf.SmoothDampAngle(_rb.rotation, targetAngle, ref _rotationVelocity, smoothTime, Mathf.Infinity, Time.fixedDeltaTime);
+            
             _rb.MoveRotation(newAngle);
         }
 

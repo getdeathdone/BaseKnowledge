@@ -39,6 +39,7 @@ namespace CoopPlatformer.Gameplay.Space
             Vector2 aim = currentAim;
             bool fire = _fireButtonQueued || Input.GetKeyDown(KeyCode.Space);
 
+            // Priority 1: Touch input (Mobile)
             if (TryGetGameplayTouch(out Touch gameplayTouch))
             {
                 if (gameplayCamera != null)
@@ -57,12 +58,21 @@ namespace CoopPlatformer.Gameplay.Space
                     }
                 }
             }
-            // Fallback for mouse/keyboard on non-mobile platforms
-            else if (Input.touchCount == 0 && move.sqrMagnitude < 0.01f && gameplayCamera != null && !pointerOverUi && !_isFireButtonPressed && !Application.isMobilePlatform)
+            // Priority 2: Mouse aim (Desktop) - now works even while moving
+            else if (Input.touchCount == 0 && gameplayCamera != null && !pointerOverUi && !_isFireButtonPressed && !Application.isMobilePlatform)
             {
                 Vector3 mouseWorld = gameplayCamera.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10f));
                 mouseWorld.z = 0f;
-                aim = (mouseWorld - shipPosition).normalized;
+                Vector2 directionToMouse = (Vector2)(mouseWorld - shipPosition);
+                if (directionToMouse.sqrMagnitude > 0.001f)
+                {
+                    aim = directionToMouse.normalized;
+                }
+            }
+            // Priority 3: Movement-based aim (if no mouse/touch and moving)
+            else if (move.sqrMagnitude > 0.01f)
+            {
+                aim = move.normalized;
             }
 
             _fireButtonQueued = false;

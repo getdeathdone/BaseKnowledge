@@ -111,9 +111,7 @@ namespace CoopPlatformer.Gameplay.Space
             // 3. Send to Server
             if (ShouldSendInput(move, aim, firing))
             {
-                move = QuantizeVector(move, 0.02f);
-                aim = QuantizeVector(aim, 0.02f);
-
+                // Removed quantization for better precision and smoothness
                 UpdateInputServerRpc(move, aim, firing);
                 _lastSentMove = move;
                 _lastSentAim = aim;
@@ -131,7 +129,7 @@ namespace CoopPlatformer.Gameplay.Space
         private void UpdateInputServerRpc(Vector2 move, Vector2 aim, bool firing)
         {
             _inputMove = Vector2.ClampMagnitude(move, 1f);
-            if (aim.sqrMagnitude > 0.1f) _inputAim = aim.normalized;
+            if (aim.sqrMagnitude > 0.001f) _inputAim = aim.normalized;
             _isFiringRequested |= firing;
         }
 
