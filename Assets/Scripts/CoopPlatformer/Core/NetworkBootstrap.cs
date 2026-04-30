@@ -21,6 +21,11 @@ namespace CoopPlatformer.Core
         public event Action<string> StatusChanged;
         private bool _createdLobbyAsHost;
 
+        private void Awake()
+        {
+            Application.targetFrameRate = 60;
+        }
+
         private void OnApplicationQuit()
         {
             CleanupSessionAsync().Forget();
