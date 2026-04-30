@@ -1,12 +1,15 @@
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 
 namespace CoopPlatformer.Gameplay.Player
 {
     /// <summary>
     /// Synchronized 2D Player Controller.
-    /// Senior Tip: Local authority for movement (responsiveness) + Server-side triggers for logic.
+    /// Senior Tip: Server-authoritative physics avoids client-side rubber banding with NetworkTransform.
     /// </summary>
+    [RequireComponent(typeof(NetworkObject))]
+    [RequireComponent(typeof(NetworkTransform))]
     [RequireComponent(typeof(Rigidbody2D))]
     public class NetworkPlayerController : NetworkBehaviour
     {
@@ -15,20 +18,32 @@ namespace CoopPlatformer.Gameplay.Player
         [SerializeField] private float _jumpForce = 7f;
 
         private Rigidbody2D _rb;
-        private Vector2 _moveInput;
+        private Vector2 _serverMoveInput;
+        private Vector2 _lastSentMoveInput = new Vector2(float.NaN, float.NaN);
+        private bool _jumpRequested;
+
+        private void Awake()
+        {
+            _rb = GetComponent<Rigidbody2D>();
+            _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+        }
 
         public override void OnNetworkSpawn()
         {
-            _rb = GetComponent<Rigidbody2D>();
-            
-            // Only enable movement and camera follow for the local player
             if (IsOwner)
             {
                 SetupCameraFollow();
             }
+
+            if (IsServer)
+            {
+                _rb.simulated = true;
+                _rb.bodyType = RigidbodyType2D.Dynamic;
+            }
             else
             {
-                _rb.bodyType = RigidbodyType2D.Kinematic; // Disable physics for remote players to avoid jitter
+                _rb.simulated = false;
+                _rb.bodyType = RigidbodyType2D.Kinematic;
             }
         }
 
@@ -49,26 +64,35 @@ namespace CoopPlatformer.Gameplay.Player
         {
             if (!IsOwner) return;
 
-            _moveInput.x = Input.GetAxisRaw("Horizontal");
-            
-            if (Input.GetButtonDown("Jump") && IsGrounded())
+            Vector2 moveInput = new Vector2(Input.GetAxisRaw("Horizontal"), 0f);
+            bool jumpPressed = Input.GetButtonDown("Jump");
+
+            if (moveInput != _lastSentMoveInput || jumpPressed)
             {
-                JumpServerRpc();
+                SubmitInputServerRpc(moveInput, jumpPressed);
+                _lastSentMoveInput = moveInput;
             }
         }
 
         private void FixedUpdate()
         {
-            if (!IsOwner) return;
+            if (!IsServer) return;
 
-            _rb.velocity = new Vector2(_moveInput.x * _moveSpeed, _rb.velocity.y);
+            _rb.velocity = new Vector2(_serverMoveInput.x * _moveSpeed, _rb.velocity.y);
+
+            if (_jumpRequested && IsGrounded())
+            {
+                _rb.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
+            }
+
+            _jumpRequested = false;
         }
 
         [ServerRpc]
-        private void JumpServerRpc()
+        private void SubmitInputServerRpc(Vector2 moveInput, bool jumpPressed)
         {
-            // Senior Tip: Server-side validation (e.g., check cooldown or energy)
-            _rb.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
+            _serverMoveInput = Vector2.ClampMagnitude(moveInput, 1f);
+            _jumpRequested |= jumpPressed;
         }
 
         private bool IsGrounded()

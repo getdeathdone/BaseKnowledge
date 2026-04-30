@@ -1,0 +1,137 @@
+using Unity.Netcode;
+using UnityEngine;
+
+namespace CoopPlatformer.Gameplay.Environment
+{
+    /// <summary>
+    /// Networked component that ensures the arena is generated for every client.
+    /// Senior Tip: Using a more generic Renderer search and dual-property color setting 
+    /// ensures compatibility with both standard and URP/HDRP pipelines.
+    /// </summary>
+    [RequireComponent(typeof(NetworkObject))]
+    public class ArenaSpawner : NetworkBehaviour
+    {
+        [Header("Arena Settings")]
+        [SerializeField] private float _defaultRadius = 36f;
+        [SerializeField] private int _starCount = 200;
+        [SerializeField] private int _boundaryCount = 64;
+
+        [Header("Prefabs & Sync")]
+        [SerializeField] private GameObject _starPrefab;
+        [SerializeField] private int _defaultSeed = 42;
+        
+        private readonly NetworkVariable<int> _activeSeed = new NetworkVariable<int>(42);
+        private readonly NetworkVariable<float> _activeRadius = new NetworkVariable<float>(36f);
+
+        public float CurrentRadius => _activeRadius.Value;
+
+        private MaterialPropertyBlock _propBlock;
+
+        private void Awake()
+        {
+            _propBlock = new MaterialPropertyBlock();
+        }
+
+        public override void OnNetworkSpawn()
+        {
+            if (IsServer)
+            {
+                _activeSeed.Value = _defaultSeed != 0 ? _defaultSeed : Random.Range(1, 9999);
+                _activeRadius.Value = _defaultRadius;
+            }
+
+            GenerateArena(_activeSeed.Value, _activeRadius.Value);
+        }
+
+        private void GenerateArena(int seed, float radius)
+        {
+            Random.InitState(seed);
+            
+            Transform existing = transform.Find("ArenaRoot");
+            if (existing != null)
+            {
+                if (Application.isPlaying) Destroy(existing.gameObject);
+                else DestroyImmediate(existing.gameObject);
+            }
+
+            GameObject arenaRoot = new GameObject("ArenaRoot");
+            arenaRoot.transform.SetParent(this.transform);
+
+            SetupStars(arenaRoot.transform, radius);
+            SetupBoundaries(arenaRoot.transform, radius);
+            
+            Debug.Log($"[ArenaSpawner] Created arena. Radius: {radius}, Seed: {seed}");
+        }
+
+        private void SetupStars(Transform parent, float radius)
+        {
+            for (int i = 0; i < _starCount; i++)
+            {
+                GameObject star;
+                if (_starPrefab != null)
+                {
+                    star = Instantiate(_starPrefab, parent);
+                }
+                else
+                {
+                    star = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                    if (star.TryGetComponent<Collider>(out var c)) Destroy(c);
+                    star.transform.SetParent(parent);
+                }
+
+                star.name = $"Star_{i:000}";
+                star.transform.position = new Vector3(
+                    Random.Range(-radius, radius),
+                    Random.Range(-radius, radius),
+                    5f);
+
+                float scale = Random.Range(0.08f, 0.22f);
+                star.transform.localScale = new Vector3(scale, scale, 1f);
+                
+                // Robust Renderer Handling
+                var rnd = star.GetComponentInChildren<Renderer>();
+                if (rnd != null)
+                {
+                    // Simple solid yellow as requested
+                    Color color = Color.yellow;
+
+                    rnd.GetPropertyBlock(_propBlock);
+                    _propBlock.SetColor("_Color", color);
+                    _propBlock.SetColor("_BaseColor", color); 
+                    _propBlock.SetColor("_MainColor", color);
+                    rnd.SetPropertyBlock(_propBlock);
+                }
+            }
+        }
+
+        private void SetupBoundaries(Transform parent, float radius)
+        {
+            for (int i = 0; i < _boundaryCount; i++)
+            {
+                GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                marker.name = $"Boundary_{i:00}";
+                if (marker.TryGetComponent<Collider>(out var c)) Destroy(c);
+                marker.transform.SetParent(parent);
+
+                float angle = i / (float)_boundaryCount * Mathf.PI * 2f;
+                Vector3 position = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * radius;
+                
+                marker.transform.position = position;
+                marker.transform.rotation = Quaternion.Euler(0f, 0f, angle * Mathf.Rad2Deg);
+                marker.transform.localScale = new Vector3(0.5f, 2f, 1f);
+                
+                var rnd = marker.GetComponentInChildren<Renderer>();
+                if (rnd != null)
+                {
+                    // Restored: Light Blue / Cyan for boundaries
+                    Color color = new Color(0.2f, 0.9f, 1f, 1f); 
+                    rnd.GetPropertyBlock(_propBlock);
+                    _propBlock.SetColor("_Color", color);
+                    _propBlock.SetColor("_BaseColor", color);
+                    _propBlock.SetColor("_MainColor", color);
+                    rnd.SetPropertyBlock(_propBlock);
+                }
+            }
+        }
+    }
+}

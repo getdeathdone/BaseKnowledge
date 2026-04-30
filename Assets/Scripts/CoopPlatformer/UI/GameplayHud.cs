@@ -4,6 +4,7 @@ using CoopPlatformer.Gameplay.Space;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CoopPlatformer.UI
 {
@@ -11,12 +12,36 @@ namespace CoopPlatformer.UI
     {
         [SerializeField] private TMP_Text _playersLabel;
         [SerializeField] private TMP_Text _healthLabel;
+        [SerializeField] private GameObject _fireButtonRoot;
+        [SerializeField] private Button _fireButton;
+
+        private NetworkShipController _ownerShip;
+
+        private void Awake()
+        {
+            if (_fireButton != null)
+            {
+                _fireButton.onClick.AddListener(OnFireButtonClicked);
+            }
+
+            SetFireButtonVisible(false);
+        }
+
+        private void OnDestroy()
+        {
+            if (_fireButton != null)
+            {
+                _fireButton.onClick.RemoveListener(OnFireButtonClicked);
+            }
+        }
 
         private void Update()
         {
             var networkManager = NetworkManager.Singleton;
             if (networkManager == null || !networkManager.IsListening)
             {
+                _ownerShip = null;
+                SetFireButtonVisible(false);
                 SetText("Players: 0", string.Empty);
                 return;
             }
@@ -25,6 +50,9 @@ namespace CoopPlatformer.UI
                 .Where(ship => ship != null && ship.IsSpawned && ship.NetworkObject != null && ship.NetworkObject.IsPlayerObject)
                 .OrderBy(ship => ship.OwnerClientId)
                 .ToArray();
+
+            _ownerShip = ships.FirstOrDefault(ship => ship.IsOwner);
+            SetFireButtonVisible(_ownerShip != null);
 
             SetPlayersText(networkManager, ships.Length);
             SetHealthText(ships);
@@ -79,6 +107,22 @@ namespace CoopPlatformer.UI
             if (_healthLabel != null)
             {
                 _healthLabel.text = value;
+            }
+        }
+
+        private void OnFireButtonClicked()
+        {
+            if (_ownerShip != null)
+            {
+                _ownerShip.QueueFireButtonShot();
+            }
+        }
+
+        private void SetFireButtonVisible(bool isVisible)
+        {
+            if (_fireButtonRoot != null && _fireButtonRoot.activeSelf != isVisible)
+            {
+                _fireButtonRoot.SetActive(isVisible);
             }
         }
     }

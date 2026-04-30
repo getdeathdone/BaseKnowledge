@@ -1,6 +1,8 @@
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using CoopPlatformer.Gameplay.Environment;
 
 namespace CoopPlatformer.Gameplay.Space
 {
@@ -10,9 +12,9 @@ namespace CoopPlatformer.Gameplay.Space
     public class NetworkShipController : NetworkBehaviour
     {
         [Header("Movement Settings")]
-        [SerializeField] private float _moveSpeed = 12f;
-        [SerializeField] private float _rotationSpeed = 600f;
-        [SerializeField] private float _arenaRadius = 25f;
+        private float _moveSpeed = 12f;
+        private float _rotationSpeed = 600f;
+        private float _arenaRadius;
 
         [Header("References")]
         [SerializeField] private NetworkProjectile _projectilePrefab;
@@ -20,6 +22,7 @@ namespace CoopPlatformer.Gameplay.Space
         [SerializeField] private Transform _visual;
 
         private readonly NetworkVariable<int> _health = new(5);
+        private readonly NetworkVariable<float> _networkArenaRadius = new(25f);
         private Rigidbody2D _rb;
         private Camera _cam;
         
@@ -27,6 +30,7 @@ namespace CoopPlatformer.Gameplay.Space
         private Vector2 _inputMove;
         private Vector2 _inputAim;
         private bool _isFiringRequested;
+        private bool _fireButtonQueued;
         
         private float _lastFireTime;
 
@@ -36,18 +40,22 @@ namespace CoopPlatformer.Gameplay.Space
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
+            _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
             _cam = Camera.main;
         }
 
         public override void OnNetworkSpawn()
         {
+            _networkArenaRadius.OnValueChanged += OnArenaRadiusChanged;
+
             if (IsServer)
             {
                 _health.Value = 5;
+                _networkArenaRadius.Value = ResolveArenaRadius();
                 _rb.simulated = true;
                 _rb.bodyType = RigidbodyType2D.Dynamic;
                 _rb.gravityScale = 0f;
-                _rb.drag = 2f;
+                _rb.drag = 0f;
                 _rb.angularDrag = 5f;
                 
                 transform.position = SpawnPointResolver.GetSpawnPosition(OwnerClientId);
@@ -64,7 +72,14 @@ namespace CoopPlatformer.Gameplay.Space
                 SetupCamera();
             }
 
+            ApplyArenaRadius(_networkArenaRadius.Value);
+
             if (_visual != null) _visual.gameObject.SetActive(true);
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            _networkArenaRadius.OnValueChanged -= OnArenaRadiusChanged;
         }
 
         private void SetupCamera()
@@ -84,13 +99,15 @@ namespace CoopPlatformer.Gameplay.Space
         {
             if (!IsOwner) return;
 
+            bool pointerOverUi = IsPointerOverUi();
+
             // 1. Gather Input (Keyboard/Mouse)
             Vector2 move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             Vector2 aim = transform.up;
-            bool firing = Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space);
+            bool firing = _fireButtonQueued || Input.GetKeyDown(KeyCode.Space);
 
-            // 2. Touch Input (Override if touching)
-            if (Input.touchCount > 0)
+            // 2. Touch Input (Override if touching outside gameplay UI)
+            if (Input.touchCount > 0 && !pointerOverUi)
             {
                 Touch t = Input.GetTouch(0);
                 if (_cam != null)
@@ -106,12 +123,10 @@ namespace CoopPlatformer.Gameplay.Space
                         move = toTouch.normalized;
                         aim = toTouch.normalized;
                     }
-                    firing = true; // Auto-fire while touching
                 }
             }
-            else if (move.sqrMagnitude < 0.01f && _cam != null)
+            else if (move.sqrMagnitude < 0.01f && _cam != null && !pointerOverUi)
             {
-                // If not moving via keyboard, look at mouse
                 Vector3 mouseWorld = _cam.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10f));
                 mouseWorld.z = 0f;
                 aim = (mouseWorld - transform.position).normalized;
@@ -119,6 +134,7 @@ namespace CoopPlatformer.Gameplay.Space
 
             // 3. Send to Server
             UpdateInputServerRpc(move, aim, firing);
+            _fireButtonQueued = false;
             
             // 4. Local Camera Fallback
             if (_cam != null && _cam.TryGetComponent<Gameplay.Player.CameraFollow>(out var follow))
@@ -132,18 +148,14 @@ namespace CoopPlatformer.Gameplay.Space
         {
             _inputMove = Vector2.ClampMagnitude(move, 1f);
             if (aim.sqrMagnitude > 0.1f) _inputAim = aim.normalized;
-            _isFiringRequested = firing;
+            _isFiringRequested |= firing;
         }
 
         private void FixedUpdate()
         {
             if (!IsServer) return;
 
-            // Apply Movement
-            if (_inputMove.sqrMagnitude > 0.01f)
-            {
-                _rb.AddForce(_inputMove * _moveSpeed * 10f); // Use force for smoother feel with drag
-            }
+            ApplyMovement();
 
             // Apply Rotation
             if (_inputAim.sqrMagnitude > 0.01f)
@@ -158,6 +170,7 @@ namespace CoopPlatformer.Gameplay.Space
             if (_isFiringRequested)
             {
                 TryFire();
+                _isFiringRequested = false;
             }
 
             // Constraints
@@ -196,6 +209,53 @@ namespace CoopPlatformer.Gameplay.Space
                 _rb.position = SpawnPointResolver.GetSpawnPosition(OwnerClientId);
                 _rb.velocity = Vector2.zero;
             }
+        }
+
+        public void QueueFireButtonShot()
+        {
+            if (!IsOwner) return;
+            _fireButtonQueued = true;
+        }
+
+        private void ApplyMovement()
+        {
+            _rb.velocity = _inputMove.sqrMagnitude > 0.01f
+                ? _inputMove * _moveSpeed
+                : Vector2.zero;
+        }
+
+        private float ResolveArenaRadius()
+        {
+            ArenaSpawner arenaSpawner = FindObjectOfType<ArenaSpawner>();
+            return arenaSpawner != null ? arenaSpawner.CurrentRadius : _arenaRadius;
+        }
+
+        private void OnArenaRadiusChanged(float previousValue, float newValue)
+        {
+            ApplyArenaRadius(newValue);
+        }
+
+        private void ApplyArenaRadius(float radius)
+        {
+            if (radius > 0f)
+            {
+                _arenaRadius = radius;
+            }
+        }
+
+        private bool IsPointerOverUi()
+        {
+            if (EventSystem.current == null)
+            {
+                return false;
+            }
+
+            if (Input.touchCount > 0)
+            {
+                return EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId);
+            }
+
+            return EventSystem.current.IsPointerOverGameObject();
         }
     }
 }
