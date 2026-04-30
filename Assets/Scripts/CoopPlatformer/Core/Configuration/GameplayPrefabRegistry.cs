@@ -1,6 +1,7 @@
+using CoopPlatformer.Gameplay.Space;
 using UnityEngine;
 
-namespace CoopPlatformer.Gameplay.Space
+namespace CoopPlatformer.Core.Configuration
 {
     public class GameplayPrefabRegistry : MonoBehaviour
     {

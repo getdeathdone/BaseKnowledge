@@ -1,6 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 using CoopPlatformer.Gameplay.Environment;
+using CoopPlatformer.Core.Configuration;
 
 namespace CoopPlatformer.Gameplay.Space
 {

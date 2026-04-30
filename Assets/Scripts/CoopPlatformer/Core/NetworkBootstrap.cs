@@ -1,6 +1,7 @@
 using Cysharp.Threading.Tasks;
 using CoopPlatformer.Infrastructure;
 using CoopPlatformer.Gameplay.Space;
+using CoopPlatformer.Core.Configuration;
 using System;
 using System.Collections.Generic;
 using Unity.Services.Lobbies.Models;
