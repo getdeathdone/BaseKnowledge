@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using CoopPlatformer.Infrastructure;
+using CoopPlatformer.Gameplay.Space;
 using System;
 using System.Collections.Generic;
 using Unity.Services.Lobbies.Models;
@@ -17,9 +18,26 @@ namespace CoopPlatformer.Core
         [SerializeField] private string _lobbyName = "CoopRoom";
 
         public event Action<string> StatusChanged;
+        private bool _createdLobbyAsHost;
+
+        private void OnApplicationQuit()
+        {
+            CleanupSessionAsync().Forget();
+        }
+
+        private void OnDestroy()
+        {
+            CleanupSessionAsync().Forget();
+        }
 
         public async UniTask<bool> StartHost()
         {
+            if (!ConfigurePlayerPrefab())
+            {
+                StatusChanged?.Invoke("Player prefab is not configured.");
+                return false;
+            }
+
             StatusChanged?.Invoke("Signing in...");
             if (!await AuthenticationProvider.InitializeAndSignInAsync())
             {
@@ -43,7 +61,14 @@ namespace CoopPlatformer.Core
                 return false;
             }
 
-            NetworkManager.Singleton.StartHost();
+            if (!NetworkManager.Singleton.StartHost())
+            {
+                await LobbyProvider.DeleteLobbyAsync();
+                StatusChanged?.Invoke("Host start failed.");
+                return false;
+            }
+
+            _createdLobbyAsHost = true;
             Debug.Log($"[Bootstrap] Host started successfully. Lobby Code: {lobby.LobbyCode}");
             StatusChanged?.Invoke($"Host ready. Lobby Code: {lobby.LobbyCode}");
             return true;
@@ -51,6 +76,12 @@ namespace CoopPlatformer.Core
 
         public async UniTask<bool> StartServerOnly()
         {
+            if (!ConfigurePlayerPrefab())
+            {
+                StatusChanged?.Invoke("Player prefab is not configured.");
+                return false;
+            }
+
             StatusChanged?.Invoke("Signing in...");
             if (!await AuthenticationProvider.InitializeAndSignInAsync())
             {
@@ -74,7 +105,14 @@ namespace CoopPlatformer.Core
                 return false;
             }
 
-            NetworkManager.Singleton.StartServer();
+            if (!NetworkManager.Singleton.StartServer())
+            {
+                await LobbyProvider.DeleteLobbyAsync();
+                StatusChanged?.Invoke("Server start failed.");
+                return false;
+            }
+
+            _createdLobbyAsHost = true;
             Debug.Log($"[Bootstrap] Server started successfully. Lobby Code: {lobby.LobbyCode}");
             StatusChanged?.Invoke($"Server ready. Lobby Code: {lobby.LobbyCode}");
             return true;
@@ -82,6 +120,12 @@ namespace CoopPlatformer.Core
 
         public async UniTask<bool> JoinRoom(string lobbyCode)
         {
+            if (!ConfigurePlayerPrefab())
+            {
+                StatusChanged?.Invoke("Player prefab is not configured.");
+                return false;
+            }
+
             StatusChanged?.Invoke("Signing in...");
             if (!await AuthenticationProvider.InitializeAndSignInAsync())
             {
@@ -99,7 +143,13 @@ namespace CoopPlatformer.Core
 
             if (await RelayProvider.JoinRelayAsync(relayCode))
             {
-                NetworkManager.Singleton.StartClient();
+                if (!NetworkManager.Singleton.StartClient())
+                {
+                    await LobbyProvider.LeaveLobbyAsync();
+                    StatusChanged?.Invoke("Client start failed.");
+                    return false;
+                }
+
                 Debug.Log("[Bootstrap] Client started successfully.");
                 StatusChanged?.Invoke("Connected to host.");
                 return true;
@@ -125,6 +175,12 @@ namespace CoopPlatformer.Core
 
         public async UniTask<bool> JoinRoomById(string lobbyId)
         {
+            if (!ConfigurePlayerPrefab())
+            {
+                StatusChanged?.Invoke("Player prefab is not configured.");
+                return false;
+            }
+
             StatusChanged?.Invoke("Signing in...");
             if (!await AuthenticationProvider.InitializeAndSignInAsync())
             {
@@ -142,7 +198,13 @@ namespace CoopPlatformer.Core
 
             if (await RelayProvider.JoinRelayAsync(relayCode))
             {
-                NetworkManager.Singleton.StartClient();
+                if (!NetworkManager.Singleton.StartClient())
+                {
+                    await LobbyProvider.LeaveLobbyAsync();
+                    StatusChanged?.Invoke("Client start failed.");
+                    return false;
+                }
+
                 Debug.Log("[Bootstrap] Client started successfully.");
                 StatusChanged?.Invoke("Connected to host.");
                 return true;
@@ -150,6 +212,51 @@ namespace CoopPlatformer.Core
 
             StatusChanged?.Invoke("Relay join failed.");
             return false;
+        }
+
+        private async UniTaskVoid CleanupSessionAsync()
+        {
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
+            try
+            {
+                if (_createdLobbyAsHost)
+                {
+                    await LobbyProvider.DeleteLobbyAsync();
+                    _createdLobbyAsHost = false;
+                }
+                else
+                {
+                    await LobbyProvider.LeaveLobbyAsync();
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Bootstrap] Cleanup failed: {e.Message}");
+            }
+        }
+
+        private bool ConfigurePlayerPrefab()
+        {
+            NetworkManager networkManager = NetworkManager.Singleton;
+            if (networkManager == null)
+            {
+                Debug.LogError("[Bootstrap] NetworkManager.Singleton is missing.");
+                return false;
+            }
+
+            GameplayPrefabRegistry registry = GameplayPrefabRegistry.Instance;
+            if (registry == null || registry.ShipPrefab == null)
+            {
+                Debug.LogError("[Bootstrap] GameplayPrefabRegistry or ShipPrefab is not configured.");
+                return false;
+            }
+
+            networkManager.NetworkConfig.PlayerPrefab = registry.ShipPrefab.gameObject;
+            return true;
         }
     }
 }

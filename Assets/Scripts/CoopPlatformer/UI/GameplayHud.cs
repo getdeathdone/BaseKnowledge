@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using CoopPlatformer.Gameplay.Space;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace CoopPlatformer.UI
@@ -21,18 +23,10 @@ namespace CoopPlatformer.UI
         {
             if (_fireButton != null)
             {
-                _fireButton.onClick.AddListener(OnFireButtonClicked);
+                ConfigureFireButtonEvents(_fireButton);
             }
 
             SetFireButtonVisible(false);
-        }
-
-        private void OnDestroy()
-        {
-            if (_fireButton != null)
-            {
-                _fireButton.onClick.RemoveListener(OnFireButtonClicked);
-            }
         }
 
         private void Update()
@@ -46,7 +40,7 @@ namespace CoopPlatformer.UI
                 return;
             }
 
-            var ships = FindObjectsByType<NetworkShipController>(FindObjectsSortMode.None)
+            NetworkShipController[] ships = NetworkShipController.Ships
                 .Where(ship => ship != null && ship.IsSpawned && ship.NetworkObject != null && ship.NetworkObject.IsPlayerObject)
                 .OrderBy(ship => ship.OwnerClientId)
                 .ToArray();
@@ -110,11 +104,21 @@ namespace CoopPlatformer.UI
             }
         }
 
-        private void OnFireButtonClicked()
+        private void OnFireButtonPointerDown(BaseEventData eventData)
         {
             if (_ownerShip != null)
             {
+                int pointerId = eventData is PointerEventData pointerEventData ? pointerEventData.pointerId : int.MinValue;
+                _ownerShip.SetFireButtonPressed(true, pointerId);
                 _ownerShip.QueueFireButtonShot();
+            }
+        }
+
+        private void OnFireButtonPointerUp(BaseEventData eventData)
+        {
+            if (_ownerShip != null)
+            {
+                _ownerShip.SetFireButtonPressed(false);
             }
         }
 
@@ -124,6 +128,29 @@ namespace CoopPlatformer.UI
             {
                 _fireButtonRoot.SetActive(isVisible);
             }
+        }
+
+        private void ConfigureFireButtonEvents(Button fireButton)
+        {
+            EventTrigger trigger = fireButton.GetComponent<EventTrigger>();
+            if (trigger == null)
+            {
+                trigger = fireButton.gameObject.AddComponent<EventTrigger>();
+            }
+
+            trigger.triggers ??= new List<EventTrigger.Entry>();
+            trigger.triggers.Clear();
+
+            AddEventTrigger(trigger, EventTriggerType.PointerDown, OnFireButtonPointerDown);
+            AddEventTrigger(trigger, EventTriggerType.PointerUp, OnFireButtonPointerUp);
+            AddEventTrigger(trigger, EventTriggerType.PointerExit, OnFireButtonPointerUp);
+        }
+
+        private static void AddEventTrigger(EventTrigger trigger, EventTriggerType eventType, UnityEngine.Events.UnityAction<BaseEventData> callback)
+        {
+            EventTrigger.Entry entry = new EventTrigger.Entry { eventID = eventType };
+            entry.callback.AddListener(callback);
+            trigger.triggers.Add(entry);
         }
     }
 }

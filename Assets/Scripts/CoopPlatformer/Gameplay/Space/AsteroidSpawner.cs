@@ -1,11 +1,11 @@
 using Unity.Netcode;
 using UnityEngine;
+using CoopPlatformer.Gameplay.Environment;
 
 namespace CoopPlatformer.Gameplay.Space
 {
     public class AsteroidSpawner : NetworkBehaviour
     {
-        [SerializeField] private AsteroidController _asteroidPrefab;
         [SerializeField] private float _arenaRadius = 18f;
         [SerializeField] private float _spawnInterval = 1.8f;
         [SerializeField] private int _maxAsteroids = 12;
@@ -14,9 +14,21 @@ namespace CoopPlatformer.Gameplay.Space
 
         private float _nextSpawnTime;
 
+        public override void OnNetworkSpawn()
+        {
+            if (IsServer)
+            {
+                ArenaSpawner arenaSpawner = FindObjectOfType<ArenaSpawner>();
+                if (arenaSpawner != null)
+                {
+                    _arenaRadius = arenaSpawner.CurrentRadius;
+                }
+            }
+        }
+
         private void Update()
         {
-            if (!IsServer || _asteroidPrefab == null)
+            if (!IsServer)
             {
                 return;
             }
@@ -26,7 +38,7 @@ namespace CoopPlatformer.Gameplay.Space
                 return;
             }
 
-            if (FindObjectsByType<AsteroidController>(FindObjectsSortMode.None).Length >= _maxAsteroids)
+            if (AsteroidController.ActiveCount >= _maxAsteroids)
             {
                 _nextSpawnTime = Time.time + 0.5f;
                 return;
@@ -38,13 +50,19 @@ namespace CoopPlatformer.Gameplay.Space
 
         private void SpawnAsteroid()
         {
+            AsteroidController asteroidPrefab = GameplayPrefabRegistry.Instance.AsteroidPrefab;
+            if (asteroidPrefab == null)
+            {
+                return;
+            }
+
             var angle = Random.Range(0f, Mathf.PI * 2f);
             var spawnPosition = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * _arenaRadius;
             var driftTarget = Random.insideUnitCircle * (_arenaRadius * 0.35f);
             var velocity = (driftTarget - spawnPosition).normalized * Random.Range(_minSpeed, _maxSpeed);
             var angularVelocity = Random.Range(-35f, 35f);
 
-            var asteroid = Instantiate(_asteroidPrefab, spawnPosition, Quaternion.identity);
+            var asteroid = Instantiate(asteroidPrefab, spawnPosition, Quaternion.identity);
             if (asteroid == null)
             {
                 Debug.LogError("[AsteroidSpawner] Failed to instantiate asteroid prefab.");

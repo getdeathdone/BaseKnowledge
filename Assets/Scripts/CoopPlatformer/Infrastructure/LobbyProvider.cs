@@ -15,6 +15,7 @@ namespace CoopPlatformer.Infrastructure
     {
         private const string RelayKey = "RelayJoinCode";
         private static Lobby _currentLobby;
+        private static int _heartbeatGeneration;
 
         public static async UniTask<Lobby> CreateLobbyAsync(string lobbyName, string relayJoinCode, int maxPlayers = 4)
         {
@@ -30,8 +31,8 @@ namespace CoopPlatformer.Infrastructure
 
                 _currentLobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayers, options);
                 
-                // Start Heartbeat
-                _ = SendHeartbeatAsync();
+                _heartbeatGeneration++;
+                _ = SendHeartbeatAsync(_currentLobby.Id, _heartbeatGeneration);
                 
                 Debug.Log($"[Lobby] Created: {_currentLobby.Name} ({_currentLobby.Id})");
                 return _currentLobby;
@@ -101,12 +102,20 @@ namespace CoopPlatformer.Infrastructure
             }
         }
 
-        private static async UniTaskVoid SendHeartbeatAsync()
+        private static async UniTaskVoid SendHeartbeatAsync(string lobbyId, int generation)
         {
-            while (_currentLobby != null)
+            while (_currentLobby != null && _currentLobby.Id == lobbyId && generation == _heartbeatGeneration)
             {
-                await LobbyService.Instance.SendHeartbeatPingAsync(_currentLobby.Id);
-                await UniTask.Delay(TimeSpan.FromSeconds(15));
+                try
+                {
+                    await LobbyService.Instance.SendHeartbeatPingAsync(lobbyId);
+                    await UniTask.Delay(TimeSpan.FromSeconds(15));
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[Lobby] Heartbeat failed: {e.Message}");
+                    break;
+                }
             }
         }
 
@@ -116,6 +125,7 @@ namespace CoopPlatformer.Infrastructure
 
             try
             {
+                _heartbeatGeneration++;
                 string playerId = Unity.Services.Authentication.AuthenticationService.Instance.PlayerId;
                 await LobbyService.Instance.RemovePlayerAsync(_currentLobby.Id, playerId);
                 _currentLobby = null;
@@ -123,6 +133,25 @@ namespace CoopPlatformer.Infrastructure
             catch (Exception e)
             {
                 Debug.LogError($"[Lobby] Leave failed: {e.Message}");
+            }
+        }
+
+        public static async UniTask DeleteLobbyAsync()
+        {
+            if (_currentLobby == null) return;
+
+            try
+            {
+                _heartbeatGeneration++;
+                await LobbyService.Instance.DeleteLobbyAsync(_currentLobby.Id);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Lobby] Delete failed: {e.Message}");
+            }
+            finally
+            {
+                _currentLobby = null;
             }
         }
     }

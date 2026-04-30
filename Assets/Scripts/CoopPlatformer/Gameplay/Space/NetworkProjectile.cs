@@ -13,7 +13,6 @@ namespace CoopPlatformer.Gameplay.Space
         [SerializeField] private float _speed = 18f;
         [SerializeField] private float _lifeTime = 2.5f;
         [SerializeField] private int _damage = 1;
-        [SerializeField] private GameObject _visual;
 
         private Rigidbody2D _rigidbody2D;
         private Vector2 _direction = Vector2.up;
@@ -39,7 +38,6 @@ namespace CoopPlatformer.Gameplay.Space
                 return;
             }
 
-            EnableVisuals();
             _rigidbody2D.gravityScale = 0f;
             _rigidbody2D.interpolation = RigidbodyInterpolation2D.Interpolate;
             _spawnTime = Time.time;
@@ -113,11 +111,6 @@ namespace CoopPlatformer.Gameplay.Space
             {
                 Destroy(gameObject);
             }
-        }
-
-        private void EnableVisuals()
-        {
-            _visual.SetActive(true);
         }
 
         private bool IsSpawnTemplate()

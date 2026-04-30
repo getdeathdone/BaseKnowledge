@@ -9,11 +9,12 @@ namespace CoopPlatformer.Gameplay.Player
     public class CameraFollow : MonoBehaviour
     {
         [Header("Settings")]
-        [SerializeField] private float _smoothSpeed = 0.125f;
+        [SerializeField] private float _smoothTime = 0.12f;
         [SerializeField] private Vector2 _offset = new Vector2(0f, 0f); // Reset offset for space shooter by default
         [SerializeField] private float _zDepth = -10f;
 
         private Transform _target;
+        private Vector3 _velocity;
 
         // Public property to check current target from other scripts
         public Transform Target => _target;
@@ -34,7 +35,7 @@ namespace CoopPlatformer.Gameplay.Player
             if (_target == null) return;
 
             Vector3 desiredPosition = new Vector3(_target.position.x + _offset.x, _target.position.y + _offset.y, _zDepth);
-            Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, _smoothSpeed);
+            Vector3 smoothedPosition = Vector3.SmoothDamp(transform.position, desiredPosition, ref _velocity, _smoothTime);
             transform.position = smoothedPosition;
         }
     }

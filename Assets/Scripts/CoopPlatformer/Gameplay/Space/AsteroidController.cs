@@ -1,6 +1,7 @@
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace CoopPlatformer.Gameplay.Space
 {
@@ -11,10 +12,11 @@ namespace CoopPlatformer.Gameplay.Space
     public class AsteroidController : NetworkBehaviour
     {
         [SerializeField] private int _health = 1;
-        [SerializeField] private GameObject _visual;
 
+        private static readonly HashSet<AsteroidController> ActiveAsteroids = new HashSet<AsteroidController>();
         private Rigidbody2D _rigidbody2D;
         private Vector2 _velocity;
+        public static int ActiveCount => ActiveAsteroids.Count;
 
         private void Awake()
         {
@@ -39,7 +41,7 @@ namespace CoopPlatformer.Gameplay.Space
                 return;
             }
 
-            EnableVisuals();
+            ActiveAsteroids.Add(this);
             _rigidbody2D.gravityScale = 0f;
             _rigidbody2D.interpolation = RigidbodyInterpolation2D.Interpolate;
 
@@ -48,6 +50,11 @@ namespace CoopPlatformer.Gameplay.Space
                 _rigidbody2D.bodyType = RigidbodyType2D.Kinematic;
                 _rigidbody2D.simulated = false;
             }
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            ActiveAsteroids.Remove(this);
         }
 
         private void FixedUpdate()
@@ -102,11 +109,6 @@ namespace CoopPlatformer.Gameplay.Space
             {
                 Destroy(gameObject);
             }
-        }
-
-        private void EnableVisuals()
-        {
-            _visual.SetActive(true);
         }
 
         private bool IsSpawnTemplate()
