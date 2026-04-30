@@ -26,10 +26,33 @@ namespace CoopPlatformer.Gameplay.Environment
         public float CurrentRadius => _activeRadius.Value;
 
         private MaterialPropertyBlock _propBlock;
+        private Mesh _quadMesh;
 
         private void Awake()
         {
             _propBlock = new MaterialPropertyBlock();
+            _quadMesh = CreateQuadMesh();
+        }
+
+        private Mesh CreateQuadMesh()
+        {
+            Mesh mesh = new Mesh();
+            mesh.vertices = new Vector3[] { new Vector3(-0.5f, -0.5f, 0), new Vector3(0.5f, -0.5f, 0), new Vector3(-0.5f, 0.5f, 0), new Vector3(0.5f, 0.5f, 0) };
+            mesh.uv = new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1), new Vector2(1, 1) };
+            mesh.triangles = new int[] { 0, 2, 1, 2, 3, 1 };
+            mesh.RecalculateNormals();
+            return mesh;
+        }
+
+        private GameObject CreateVisualQuad(string name, Transform parent, Material material = null)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(parent);
+            var filter = go.AddComponent<MeshFilter>();
+            filter.mesh = _quadMesh;
+            var renderer = go.AddComponent<MeshRenderer>();
+            if (material != null) renderer.sharedMaterial = material;
+            return go;
         }
 
         public override void OnNetworkSpawn()
@@ -74,12 +97,9 @@ namespace CoopPlatformer.Gameplay.Environment
                 }
                 else
                 {
-                    star = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                    if (star.TryGetComponent<Collider>(out var c)) Destroy(c);
-                    star.transform.SetParent(parent);
+                    star = CreateVisualQuad($"Star_{i:000}", parent);
                 }
 
-                star.name = $"Star_{i:000}";
                 star.transform.position = new Vector3(
                     Random.Range(-radius, radius),
                     Random.Range(-radius, radius),
@@ -108,10 +128,7 @@ namespace CoopPlatformer.Gameplay.Environment
         {
             for (int i = 0; i < _boundaryCount; i++)
             {
-                GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                marker.name = $"Boundary_{i:00}";
-                if (marker.TryGetComponent<Collider>(out var c)) Destroy(c);
-                marker.transform.SetParent(parent);
+                GameObject marker = CreateVisualQuad($"Boundary_{i:00}", parent);
 
                 float angle = i / (float)_boundaryCount * Mathf.PI * 2f;
                 Vector3 position = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * radius;
