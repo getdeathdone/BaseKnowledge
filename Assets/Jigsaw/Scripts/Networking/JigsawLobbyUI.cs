@@ -7,10 +7,6 @@ using UnityEngine.UI;
 
 namespace Jigsaw.Networking
 {
-    /// <summary>
-    /// Меню сетевого лобби, аналогичное CoopPlatformer.
-    /// Позволяет создавать комнаты, искать публичные комнаты и подключаться по коду.
-    /// </summary>
     public class JigsawLobbyUI : MonoBehaviour
     {
         [SerializeField] private JigsawNetworkBootstrap _bootstrap;
@@ -19,12 +15,12 @@ namespace Jigsaw.Networking
         [SerializeField] private TMP_InputField _joinCodeInput;
 
         [SerializeField] private Button _hostOnlyButton;
-        [SerializeField] private Button _clientButton; // Rename _joinByCodeButton to match
+        [SerializeField] private Button _clientButton; 
         [SerializeField] private Button _hostClientButton;
         [SerializeField] private Button _refreshButton;
         
-        [SerializeField] private GameObject _mainPanel; // Acts as lobby root
-        [SerializeField] private GameObject _uiPanel; // Acts as lobby root
+        [SerializeField] private GameObject _mainPanel; 
+        [SerializeField] private GameObject _uiPanel; 
         [SerializeField] private GameObject _loadingOverlay;
         [SerializeField] private TMP_Text _statusLabel;
         [SerializeField] private RectTransform _roomListRoot;
@@ -113,7 +109,6 @@ namespace Jigsaw.Networking
 
         private void CreateRoomEntry(Lobby room)
         {
-            // Простая реализация создания элемента списка через код (как в примере)
             GameObject entry = new GameObject($"Room_{room.Name}", typeof(RectTransform), typeof(Image));
             entry.transform.SetParent(_roomListRoot, false);
             
@@ -125,14 +120,12 @@ namespace Jigsaw.Networking
             layout.spacing = 10;
             layout.childControlWidth = true;
 
-            // Текст с инфо
             GameObject textObj = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
             textObj.transform.SetParent(entry.transform, false);
             var text = textObj.GetComponent<TextMeshProUGUI>();
             text.text = $"{room.Name} ({room.Players.Count}/{room.MaxPlayers})";
             text.fontSize = 18;
 
-            // Кнопка Join
             GameObject btnObj = new GameObject("JoinBtn", typeof(RectTransform), typeof(Image), typeof(Button));
             btnObj.transform.SetParent(entry.transform, false);
             btnObj.GetComponent<Image>().color = Color.green;

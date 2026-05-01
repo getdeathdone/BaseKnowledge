@@ -2,13 +2,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Для использования списка
-
 namespace Jigsaw.Scripts.Game
 {
     public class Game : MonoBehaviour
     {
-        public List<Texture> images; // Лист текстур
+        public List<Texture> images; 
         public GameObject puzzle;
 
         public Button guiMenuNextButton;
@@ -16,7 +14,7 @@ namespace Jigsaw.Scripts.Game
         public Button guiMenuRestartButton;
 
         private GameJigsawPuzzle jigsawPuzzle;
-        private int puzzleImageIndex; // Индекс текущей текстуры
+        private int puzzleImageIndex; 
         private int sizeMode = 3;
 
         public static int PUZZLE_Number
@@ -48,7 +46,6 @@ namespace Jigsaw.Scripts.Game
         {
             if (jigsawPuzzle.solved)
             {
-                // Если пазл решен, выводим статистику
                 GUI.skin.box.fontSize = 24;
                 GUI.skin.box.alignment = TextAnchor.MiddleCenter;
                 GUI.Box(new Rect(Screen.width - 320, 20, 300, 100),
@@ -74,13 +71,10 @@ namespace Jigsaw.Scripts.Game
 
         private void PuzzleNumber(int number)
         {
-            // Увеличиваем индекс изображения
             puzzleImageIndex = number;
 
-            // Если индекс превышает количество изображений в списке, сбрасываем его в 0
             if (puzzleImageIndex >= images.Count) puzzleImageIndex = 0;
 
-            // Получаем текущее изображение из списка и устанавливаем его в пазл
             jigsawPuzzle.image = images[puzzleImageIndex];
             puzzle.transform.localScale = new Vector3(8.25f, 5.15625f, 0.738487959f);
 
@@ -118,7 +112,6 @@ namespace Jigsaw.Scripts.Game
         {
             if (Unity.Netcode.NetworkManager.Singleton != null && !Unity.Netcode.NetworkManager.Singleton.IsHost) return;
 
-            // Логика изменения размеров пазла
             sizeMode++;
 
             if ((Application.platform == RuntimePlatform.IPhonePlayer || Application.platform == RuntimePlatform.Android) &&
@@ -134,7 +127,6 @@ namespace Jigsaw.Scripts.Game
         {
             if (Unity.Netcode.NetworkManager.Singleton != null && !Unity.Netcode.NetworkManager.Singleton.IsHost && Unity.Netcode.NetworkManager.Singleton.IsConnectedClient) return;
 
-            // Выбираем случайную картинку
             int newImageIndex = Random.Range(0, images.Count);
             while (newImageIndex == puzzleImageIndex && images.Count > 1)
             {
@@ -144,13 +136,11 @@ namespace Jigsaw.Scripts.Game
             puzzleImageIndex = newImageIndex;
             jigsawPuzzle.image = images[puzzleImageIndex];
 
-            // Случайное начальное положение верхней левой части пазла
             var topLeft = "" + ((int)Mathf.Floor(Random.value * 5) + 1) + ((int)Mathf.Floor(Random.value * 5) + 1);
 
             while (jigsawPuzzle.topLeftPiece == topLeft)
                 topLeft = "" + ((int)Mathf.Floor(Random.value * 5) + 1) + ((int)Mathf.Floor(Random.value * 5) + 1);
 
-            // Устанавливаем верхнюю левую часть пазла, чтобы перезапуск был принудительным
             jigsawPuzzle.topLeftPiece = topLeft;
             
             UpdateNetworkSettings();

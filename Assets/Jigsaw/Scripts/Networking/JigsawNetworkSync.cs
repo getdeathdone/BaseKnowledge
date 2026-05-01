@@ -62,7 +62,6 @@ namespace Jigsaw.Scripts.Networking
 
         private void OnClientConnected(ulong clientId)
         {
-            // Sync current state to new client if needed (NetworkVariables handle most of it)
         }
 
         private void ApplyNetworkSettings()
