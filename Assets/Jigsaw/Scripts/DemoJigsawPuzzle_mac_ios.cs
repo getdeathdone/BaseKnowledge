@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections;
 
 // the DemoJigsawPuzzle Class is a sub class of JigsawPuzzle that can be used to create an ingame puzzle
 // The following base functions can be overridden :
@@ -24,32 +23,31 @@ using System.Collections;
 //		-	showLines		:   display 'helper' puzzle matrix 
 //		-	placePrecision	:	how precise must a piece beeing placed on the puzzle (12-15-25 depending on difficuly)
 //
-public class DemoJigsawPuzzle_mac_ios : DemoJigsawPuzzle
+namespace Jigsaw.Scripts
 {
-   
-
-    // ActivatePiece is called when one clicks - and hold mouse left button
-    // on a (loose) puzzle piece.
-    protected override void ActivatePiece(GameObject piece)
+    public class DemoJigsawPuzzle_mac_ios : DemoJigsawPuzzle
     {
-        // show real colors of this piece by setting diffuse color
-        piece.GetComponent<Renderer>().material.color = new Color(1.0f,1.0f,1.0f);
-    }
+        // ActivatePiece is called when one clicks - and hold mouse left button
+        // on a (loose) puzzle piece.
+        protected override void ActivatePiece(GameObject piece)
+        {
+            // show real colors of this piece by setting diffuse color
+            piece.GetComponent<Renderer>().material.color = new Color(1.0f, 1.0f, 1.0f);
+        }
 
-    // DeativatePiece is called when one releases left mouse button
-    // and a puzzle piece was active
-    protected override void DeactivatePiece(GameObject piece)
-    {
-        // show lightened colors of this piece by setting diffuse color
-        piece.GetComponent<Renderer>().material.color = new Color(0.8f,0.8f,0.8f);
-    }
-	
-	// PiecePlace is called when a puzzle piece is fit on the correct spot 
-    protected override void PiecePlaced(GameObject piece)
-    {
-        // show real colors of this piece by setting diffuse color
-        piece.GetComponent<Renderer>().material.color = new Color(1.0f,1.0f,1.0f);
-    }
-	
+        // DeativatePiece is called when one releases left mouse button
+        // and a puzzle piece was active
+        protected override void DeactivatePiece(GameObject piece)
+        {
+            // show lightened colors of this piece by setting diffuse color
+            piece.GetComponent<Renderer>().material.color = new Color(0.8f, 0.8f, 0.8f);
+        }
 
+        // PiecePlace is called when a puzzle piece is fit on the correct spot 
+        protected override void PiecePlaced(GameObject piece)
+        {
+            // show real colors of this piece by setting diffuse color
+            piece.GetComponent<Renderer>().material.color = new Color(1.0f, 1.0f, 1.0f);
+        }
+    }
 }
