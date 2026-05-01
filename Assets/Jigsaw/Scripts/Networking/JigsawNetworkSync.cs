@@ -1,16 +1,17 @@
 using System.Collections.Generic;
+using Jigsaw.Scripts.Core;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
-namespace Jigsaw.Scripts
+namespace Jigsaw.Scripts.Networking
 {
     public class JigsawNetworkSync : NetworkBehaviour
     {
         public NetworkVariable<int> ImageIndex = new();
         public NetworkVariable<Vector2> PuzzleSize = new(new Vector2(5, 5));
         public NetworkVariable<FixedString64Bytes> TopLeftPiece = new("11");
-        private Demo _demo;
+        private Game.Game _game;
         private readonly Dictionary<string, ulong> _lockedPieces = new();
 
         private readonly Dictionary<string, GameObject> _pieceNameToObj = new();
@@ -19,14 +20,14 @@ namespace Jigsaw.Scripts
         private void Awake()
         {
             _puzzle = GetComponent<JigsawPuzzle>();
-            _demo = FindObjectOfType<Demo>();
+            _game = FindObjectOfType<Game.Game>();
         }
 
         public override void OnNetworkSpawn()
         {
             if (IsServer)
             {
-                ImageIndex.Value = Demo.PUZZLE_Number;
+                ImageIndex.Value = Game.Game.PUZZLE_Number;
                 PuzzleSize.Value = _puzzle.size;
                 TopLeftPiece.Value = _puzzle.topLeftPiece;
 
@@ -43,11 +44,11 @@ namespace Jigsaw.Scripts
 
             // Hide UI buttons for clients
             if (!IsHost)
-                if (_demo != null)
+                if (_game != null)
                 {
-                    if (_demo.guiMenuNextButton != null) _demo.guiMenuNextButton.gameObject.SetActive(false);
-                    if (_demo.guiMenuPiecesButton != null) _demo.guiMenuPiecesButton.gameObject.SetActive(false);
-                    if (_demo.guiMenuRestartButton != null) _demo.guiMenuRestartButton.gameObject.SetActive(false);
+                    if (_game.guiMenuNextButton != null) _game.guiMenuNextButton.gameObject.SetActive(false);
+                    if (_game.guiMenuPiecesButton != null) _game.guiMenuPiecesButton.gameObject.SetActive(false);
+                    if (_game.guiMenuRestartButton != null) _game.guiMenuRestartButton.gameObject.SetActive(false);
                 }
         }
 
@@ -68,7 +69,7 @@ namespace Jigsaw.Scripts
             if (IsHost) return;
 
             // Sync image
-            if (_demo != null && ImageIndex.Value < _demo.images.Count) _puzzle.image = _demo.images[ImageIndex.Value];
+            if (_game != null && ImageIndex.Value < _game.images.Count) _puzzle.image = _game.images[ImageIndex.Value];
 
             _puzzle.size = PuzzleSize.Value;
             _puzzle.topLeftPiece = TopLeftPiece.Value.ToString();

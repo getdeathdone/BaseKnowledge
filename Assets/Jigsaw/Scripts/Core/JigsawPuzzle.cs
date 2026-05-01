@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Jigsaw.Scripts.Networking;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -17,7 +18,7 @@ using Random = UnityEngine.Random;
 // 
 // (see DemoJigsawPuzzle class included with the product Demo)														//需要参阅Demo.JigsawPuzzle.cs 案例
 //
-namespace Jigsaw.Scripts
+namespace Jigsaw.Scripts.Core
 {
     [Serializable]
     public class JigsawPuzzle : MonoBehaviour

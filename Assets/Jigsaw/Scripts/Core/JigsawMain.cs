@@ -7,7 +7,7 @@ using UnityEngine;
 // You need to attach this script to an object in your scene. easiest way is to add the JigsawMain prefab
 // to you scene.
 //
-namespace Jigsaw.Scripts
+namespace Jigsaw.Scripts.Core
 {
     public class JigsawMain : MonoBehaviour
     {

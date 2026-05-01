@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-namespace Jigsaw.Scripts
+namespace Jigsaw.Scripts.UI
 {
     public class ButtonToggle : MonoBehaviour
     {

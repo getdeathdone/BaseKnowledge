@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Jigsaw.Scripts
+namespace Jigsaw.Scripts.UI
 {
     /// <summary>
     /// Скрипт для главного меню игры.

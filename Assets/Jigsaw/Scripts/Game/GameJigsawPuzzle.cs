@@ -1,3 +1,4 @@
+using Jigsaw.Scripts.Core;
 using UnityEngine;
 
 // the DemoJigsawPuzzle Class is a sub class of JigsawPuzzle that can be used to create an ingame puzzle
@@ -23,9 +24,9 @@ using UnityEngine;
 //		-	showLines		:   display 'helper' puzzle matrix 
 //		-	placePrecision	:	how precise must a piece beeing placed on the puzzle (12-15-25 depending on difficuly)
 //
-namespace Jigsaw.Scripts
+namespace Jigsaw.Scripts.Game
 {
-    public class DemoJigsawPuzzle : JigsawPuzzle
+    public class GameJigsawPuzzle : JigsawPuzzle
     {
         private float _Color;
         private float _LightUp;

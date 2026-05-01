@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
-namespace Jigsaw.Scripts
+namespace Jigsaw.Scripts.Networking
 {
     public class JigsawNetworkBootstrap : MonoBehaviour
     {

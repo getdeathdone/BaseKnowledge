@@ -23,9 +23,9 @@ using UnityEngine;
 //		-	showLines		:   display 'helper' puzzle matrix 
 //		-	placePrecision	:	how precise must a piece beeing placed on the puzzle (12-15-25 depending on difficuly)
 //
-namespace Jigsaw.Scripts
+namespace Jigsaw.Scripts.Game
 {
-    public class DemoJigsawPuzzle_mac_ios : DemoJigsawPuzzle
+    public class GameJigsawPuzzleMacIOS : GameJigsawPuzzle
     {
         // ActivatePiece is called when one clicks - and hold mouse left button
         // on a (loose) puzzle piece.

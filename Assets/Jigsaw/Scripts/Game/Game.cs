@@ -4,9 +4,9 @@ using UnityEngine.UI;
 
 // Для использования списка
 
-namespace Jigsaw.Scripts
+namespace Jigsaw.Scripts.Game
 {
-    public class Demo : MonoBehaviour
+    public class Game : MonoBehaviour
     {
         public List<Texture> images; // Лист текстур
         public GameObject puzzle;
@@ -15,7 +15,7 @@ namespace Jigsaw.Scripts
         public Button guiMenuPiecesButton;
         public Button guiMenuRestartButton;
 
-        private DemoJigsawPuzzle jigsawPuzzle;
+        private GameJigsawPuzzle jigsawPuzzle;
         private int puzzleImageIndex; // Индекс текущей текстуры
         private int sizeMode = 3;
 
@@ -36,7 +36,7 @@ namespace Jigsaw.Scripts
         {
             if (puzzle == null) return;
 
-            jigsawPuzzle = puzzle.GetComponent<DemoJigsawPuzzle_mac_ios>();
+            jigsawPuzzle = puzzle.GetComponent<GameJigsawPuzzleMacIOS>();
 
             if (jigsawPuzzle == null) return;
 
