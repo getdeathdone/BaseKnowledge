@@ -134,6 +134,16 @@ namespace Jigsaw.Scripts.Game
         {
             if (Unity.Netcode.NetworkManager.Singleton != null && !Unity.Netcode.NetworkManager.Singleton.IsHost && Unity.Netcode.NetworkManager.Singleton.IsConnectedClient) return;
 
+            // Выбираем случайную картинку
+            int newImageIndex = Random.Range(0, images.Count);
+            while (newImageIndex == puzzleImageIndex && images.Count > 1)
+            {
+                newImageIndex = Random.Range(0, images.Count);
+            }
+            
+            puzzleImageIndex = newImageIndex;
+            jigsawPuzzle.image = images[puzzleImageIndex];
+
             // Случайное начальное положение верхней левой части пазла
             var topLeft = "" + ((int)Mathf.Floor(Random.value * 5) + 1) + ((int)Mathf.Floor(Random.value * 5) + 1);
 
@@ -142,6 +152,7 @@ namespace Jigsaw.Scripts.Game
 
             // Устанавливаем верхнюю левую часть пазла, чтобы перезапуск был принудительным
             jigsawPuzzle.topLeftPiece = topLeft;
+            
             UpdateNetworkSettings();
         }
 
