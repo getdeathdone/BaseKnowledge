@@ -28,7 +28,7 @@ namespace Jigsaw.Demo
 
     private void MenuBack()
     {
-      SceneManager.LoadScene(1);
+      SceneManager.LoadScene(0);
     }
 
     // Метод для показа списка кнопок и переключения на кнопку Hide
