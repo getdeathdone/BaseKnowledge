@@ -1,34 +1,145 @@
+using System;
+using System.Collections.Generic;
+using CoopPlatformer.Infrastructure;
+using Cysharp.Threading.Tasks;
 using Unity.Netcode;
+using Unity.Services.Lobbies.Models;
 using UnityEngine;
 
-namespace Jigsaw.Scripts.Networking
+namespace Jigsaw.Networking
 {
     public class JigsawNetworkBootstrap : MonoBehaviour
     {
-        private void OnGUI()
-        {
-            GUILayout.BeginArea(new Rect(10, 10, 300, 300));
-            if (!NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
-                StartButtons();
-            else
-                StatusLabels();
+        [SerializeField] private string _lobbyName = "JigsawPuzzleRoom";
+        private bool _createdLobbyAsHost;
 
-            GUILayout.EndArea();
+        public event Action<string> StatusChanged;
+
+        public async UniTask<bool> StartHost()
+        {
+            StatusChanged?.Invoke("Signing in...");
+            if (!await AuthenticationProvider.InitializeAndSignInAsync())
+            {
+                StatusChanged?.Invoke("Sign-in failed.");
+                return false;
+            }
+
+            StatusChanged?.Invoke("Creating relay...");
+            var relayCode = await RelayProvider.CreateRelayHostAsync();
+            if (string.IsNullOrEmpty(relayCode))
+            {
+                StatusChanged?.Invoke("Relay creation failed.");
+                return false;
+            }
+
+            StatusChanged?.Invoke("Creating lobby...");
+            var lobby = await LobbyProvider.CreateLobbyAsync(_lobbyName, relayCode);
+            if (lobby == null)
+            {
+                StatusChanged?.Invoke("Lobby creation failed.");
+                return false;
+            }
+
+            if (!NetworkManager.Singleton.StartHost())
+            {
+                await LobbyProvider.DeleteLobbyAsync();
+                StatusChanged?.Invoke("Host start failed.");
+                return false;
+            }
+
+            _createdLobbyAsHost = true;
+            StatusChanged?.Invoke($"Host ready. Code: {lobby.LobbyCode}");
+            return true;
         }
 
-        private void StartButtons()
+        public async UniTask<bool> StartServerOnly()
         {
-            if (GUILayout.Button("Host (Server + Client)")) NetworkManager.Singleton.StartHost();
-            if (GUILayout.Button("Client")) NetworkManager.Singleton.StartClient();
-            if (GUILayout.Button("Server")) NetworkManager.Singleton.StartServer();
+            StatusChanged?.Invoke("Signing in...");
+            if (!await AuthenticationProvider.InitializeAndSignInAsync()) return false;
+
+            StatusChanged?.Invoke("Creating relay...");
+            var relayCode = await RelayProvider.CreateRelayHostAsync();
+            if (string.IsNullOrEmpty(relayCode)) return false;
+
+            StatusChanged?.Invoke("Creating lobby...");
+            var lobby = await LobbyProvider.CreateLobbyAsync(_lobbyName, relayCode);
+            if (lobby == null) return false;
+
+            if (!NetworkManager.Singleton.StartServer())
+            {
+                await LobbyProvider.DeleteLobbyAsync();
+                return false;
+            }
+
+            _createdLobbyAsHost = true;
+            StatusChanged?.Invoke($"Server ready. Code: {lobby.LobbyCode}");
+            return true;
         }
 
-        private void StatusLabels()
+        public async UniTask<bool> JoinRoom(string lobbyCode)
         {
-            var mode = NetworkManager.Singleton.IsHost ? "Host" : NetworkManager.Singleton.IsServer ? "Server" : "Client";
+            StatusChanged?.Invoke("Signing in...");
+            if (!await AuthenticationProvider.InitializeAndSignInAsync()) return false;
 
-            GUILayout.Label("Transport: " + NetworkManager.Singleton.NetworkConfig.NetworkTransport.GetType().Name);
-            GUILayout.Label("Mode: " + mode);
+            StatusChanged?.Invoke("Joining lobby...");
+            var relayCode = await LobbyProvider.JoinLobbyByCodeAsync(lobbyCode);
+            if (string.IsNullOrEmpty(relayCode))
+            {
+                StatusChanged?.Invoke("Lobby not found.");
+                return false;
+            }
+
+            if (await RelayProvider.JoinRelayAsync(relayCode))
+            {
+                if (!NetworkManager.Singleton.StartClient())
+                {
+                    await LobbyProvider.LeaveLobbyAsync();
+                    return false;
+                }
+                StatusChanged?.Invoke("Connected.");
+                return true;
+            }
+            return false;
+        }
+
+        public async UniTask<List<Lobby>> QueryRooms()
+        {
+            StatusChanged?.Invoke("Refreshing...");
+            if (!await AuthenticationProvider.InitializeAndSignInAsync()) return new List<Lobby>();
+            return await LobbyProvider.QueryPublicLobbiesAsync();
+        }
+
+        public async UniTask<bool> JoinRoomById(string lobbyId)
+        {
+            StatusChanged?.Invoke("Signing in...");
+            if (!await AuthenticationProvider.InitializeAndSignInAsync()) return false;
+
+            StatusChanged?.Invoke("Joining...");
+            var relayCode = await LobbyProvider.JoinLobbyByIdAsync(lobbyId);
+            if (string.IsNullOrEmpty(relayCode)) return false;
+
+            if (await RelayProvider.JoinRelayAsync(relayCode))
+            {
+                if (!NetworkManager.Singleton.StartClient())
+                {
+                    await LobbyProvider.LeaveLobbyAsync();
+                    return false;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private void OnDestroy()
+        {
+            CleanupSessionAsync().Forget();
+        }
+
+        private async UniTaskVoid CleanupSessionAsync()
+        {
+            if (!Application.isPlaying) return;
+            if (_createdLobbyAsHost) await LobbyProvider.DeleteLobbyAsync();
+            else await LobbyProvider.LeaveLobbyAsync();
         }
     }
 }

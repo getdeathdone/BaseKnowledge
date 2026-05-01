@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Jigsaw.Scripts.Core;
+using Jigsaw.Scripts.Game;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -8,30 +9,38 @@ namespace Jigsaw.Scripts.Networking
 {
     public class JigsawNetworkSync : NetworkBehaviour
     {
-        public NetworkVariable<int> ImageIndex = new();
-        public NetworkVariable<Vector2> PuzzleSize = new(new Vector2(5, 5));
-        public NetworkVariable<FixedString64Bytes> TopLeftPiece = new("11");
-        private Game.Game _game;
-        private readonly Dictionary<string, ulong> _lockedPieces = new();
+        public NetworkVariable<int> ImageIndex = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        public NetworkVariable<Vector2> PuzzleSize = new(new Vector2(5, 5), NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        public NetworkVariable<FixedString64Bytes> TopLeftPiece = new("11", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-        private readonly Dictionary<string, GameObject> _pieceNameToObj = new();
         private JigsawPuzzle _puzzle;
+        private Jigsaw.Scripts.Game.Game _game;
+        private readonly Dictionary<string, ulong> _lockedPieces = new();
+        private readonly Dictionary<string, GameObject> _pieceNameToObj = new();
 
         private void Awake()
         {
             _puzzle = GetComponent<JigsawPuzzle>();
-            _game = FindObjectOfType<Game.Game>();
+            _game = FindObjectOfType<Jigsaw.Scripts.Game.Game>();
         }
+
+        private bool _uiHidden = false;
 
         public override void OnNetworkSpawn()
         {
             if (IsServer)
             {
-                ImageIndex.Value = Game.Game.PUZZLE_Number;
-                PuzzleSize.Value = _puzzle.size;
-                TopLeftPiece.Value = _puzzle.topLeftPiece;
+                if (_puzzle != null)
+                {
+                    ImageIndex.Value = Jigsaw.Scripts.Game.Game.PUZZLE_Number;
+                    PuzzleSize.Value = _puzzle.size;
+                    TopLeftPiece.Value = _puzzle.topLeftPiece;
+                }
 
-                NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+                if (NetworkManager.Singleton != null)
+                {
+                    NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+                }
             }
             else
             {
@@ -41,35 +50,29 @@ namespace Jigsaw.Scripts.Networking
             ImageIndex.OnValueChanged += (oldVal, newVal) => ApplyNetworkSettings();
             PuzzleSize.OnValueChanged += (oldVal, newVal) => ApplyNetworkSettings();
             TopLeftPiece.OnValueChanged += (oldVal, newVal) => ApplyNetworkSettings();
-
-            // Hide UI buttons for clients
-            if (!IsHost)
-                if (_game != null)
-                {
-                    if (_game.guiMenuNextButton != null) _game.guiMenuNextButton.gameObject.SetActive(false);
-                    if (_game.guiMenuPiecesButton != null) _game.guiMenuPiecesButton.gameObject.SetActive(false);
-                    if (_game.guiMenuRestartButton != null) _game.guiMenuRestartButton.gameObject.SetActive(false);
-                }
         }
 
         public override void OnNetworkDespawn()
         {
             if (IsServer && NetworkManager.Singleton != null)
+            {
                 NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+            }
         }
 
         private void OnClientConnected(ulong clientId)
         {
-            if (!IsServer) return;
-            // Batch sync could be implemented here if needed
+            // Sync current state to new client if needed (NetworkVariables handle most of it)
         }
 
         private void ApplyNetworkSettings()
         {
-            if (IsHost) return;
+            if (IsHost || _puzzle == null) return;
 
-            // Sync image
-            if (_game != null && ImageIndex.Value < _game.images.Count) _puzzle.image = _game.images[ImageIndex.Value];
+            if (_game != null && ImageIndex.Value < _game.images.Count)
+            {
+                _puzzle.image = _game.images[ImageIndex.Value];
+            }
 
             _puzzle.size = PuzzleSize.Value;
             _puzzle.topLeftPiece = TopLeftPiece.Value.ToString();
@@ -87,7 +90,7 @@ namespace Jigsaw.Scripts.Networking
         [ServerRpc(RequireOwnership = false)]
         public void RequestDragServerRpc(string pieceName, ServerRpcParams rpcParams = default)
         {
-            var clientId = rpcParams.Receive.SenderClientId;
+            ulong clientId = rpcParams.Receive.SenderClientId;
             if (!_lockedPieces.ContainsKey(pieceName) || _lockedPieces[pieceName] == 0)
             {
                 _lockedPieces[pieceName] = clientId;
@@ -104,9 +107,11 @@ namespace Jigsaw.Scripts.Networking
         [ServerRpc(RequireOwnership = false)]
         public void UpdatePiecePositionServerRpc(string pieceName, Vector3 position, ServerRpcParams rpcParams = default)
         {
-            var clientId = rpcParams.Receive.SenderClientId;
+            ulong clientId = rpcParams.Receive.SenderClientId;
             if (_lockedPieces.ContainsKey(pieceName) && _lockedPieces[pieceName] == clientId)
+            {
                 UpdatePiecePositionClientRpc(pieceName, position, clientId);
+            }
         }
 
         [ClientRpc]
@@ -114,15 +119,17 @@ namespace Jigsaw.Scripts.Networking
         {
             if (ownerId == NetworkManager.Singleton.LocalClientId) return;
 
-            var piece = GetPieceByName(pieceName);
-            if (piece != null) piece.transform.position = position;
+            GameObject piece = GetPieceByName(pieceName);
+            if (piece != null)
+            {
+                piece.transform.position = position;
+            }
         }
 
         [ServerRpc(RequireOwnership = false)]
-        public void ReleaseDragServerRpc(string pieceName, Vector3 position, bool isPlaced,
-            ServerRpcParams rpcParams = default)
+        public void ReleaseDragServerRpc(string pieceName, Vector3 position, bool isPlaced, ServerRpcParams rpcParams = default)
         {
-            var clientId = rpcParams.Receive.SenderClientId;
+            ulong clientId = rpcParams.Receive.SenderClientId;
             if (_lockedPieces.ContainsKey(pieceName) && _lockedPieces[pieceName] == clientId)
             {
                 _lockedPieces[pieceName] = 0;
@@ -134,47 +141,60 @@ namespace Jigsaw.Scripts.Networking
         private void OnDragReleasedClientRpc(string pieceName, Vector3 position, bool isPlaced)
         {
             _lockedPieces[pieceName] = 0;
-            var piece = GetPieceByName(pieceName);
+            GameObject piece = GetPieceByName(pieceName);
             if (piece != null)
             {
                 piece.transform.position = position;
                 if (isPlaced)
                 {
-                    var puzzleContainer = GameObject.Find("puzzleContainer");
-                    if (puzzleContainer != null) piece.transform.parent = puzzleContainer.transform;
+                    GameObject puzzleContainer = GameObject.Find("puzzleContainer");
+                    if (puzzleContainer != null)
+                    {
+                        piece.transform.parent = puzzleContainer.transform;
+                    }
                 }
             }
         }
 
         private GameObject GetPieceByName(string pieceName)
         {
-            if (_pieceNameToObj.TryGetValue(pieceName, out var obj) && obj != null) return obj;
+            if (_pieceNameToObj.TryGetValue(pieceName, out GameObject obj) && obj != null)
+            {
+                return obj;
+            }
 
-            var piecesContainer = GameObject.Find("piecesContainer");
+            GameObject piecesContainer = GameObject.Find("piecesContainer");
             if (piecesContainer != null)
+            {
                 foreach (Transform child in piecesContainer.transform)
+                {
                     if (child.name == pieceName)
                     {
                         _pieceNameToObj[pieceName] = child.gameObject;
                         return child.gameObject;
                     }
+                }
+            }
 
-            var puzzleContainer = GameObject.Find("puzzleContainer");
+            GameObject puzzleContainer = GameObject.Find("puzzleContainer");
             if (puzzleContainer != null)
+            {
                 foreach (Transform child in puzzleContainer.transform)
+                {
                     if (child.name == pieceName)
                     {
                         _pieceNameToObj[pieceName] = child.gameObject;
                         return child.gameObject;
                     }
+                }
+            }
 
             return null;
         }
 
         public bool IsPieceLocked(string pieceName)
         {
-            return _lockedPieces.ContainsKey(pieceName) && _lockedPieces[pieceName] != 0 &&
-                   _lockedPieces[pieceName] != NetworkManager.Singleton.LocalClientId;
+            return _lockedPieces.ContainsKey(pieceName) && _lockedPieces[pieceName] != 0 && _lockedPieces[pieceName] != NetworkManager.Singleton.LocalClientId;
         }
     }
 }

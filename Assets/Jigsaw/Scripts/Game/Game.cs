@@ -58,7 +58,18 @@ namespace Jigsaw.Scripts.Game
 
         private void Puzzle()
         {
-            PuzzleNumber(puzzleImageIndex++);
+            if (Unity.Netcode.NetworkManager.Singleton != null && !Unity.Netcode.NetworkManager.Singleton.IsHost) return;
+            PuzzleNumber(puzzleImageIndex + 1);
+        }
+
+        public void UpdateNetworkSettings()
+        {
+            if (puzzle == null) return;
+            var networkSync = puzzle.GetComponent<Networking.JigsawNetworkSync>();
+            if (networkSync != null && networkSync.IsServer)
+            {
+                networkSync.UpdateSettings(puzzleImageIndex, jigsawPuzzle.size, jigsawPuzzle.topLeftPiece);
+            }
         }
 
         private void PuzzleNumber(int number)
@@ -73,24 +84,9 @@ namespace Jigsaw.Scripts.Game
             jigsawPuzzle.image = images[puzzleImageIndex];
             puzzle.transform.localScale = new Vector3(8.25f, 5.15625f, 0.738487959f);
 
-            // Применяем масштаб для текущего изображения
-            /*switch (puzzleImageIndex)
-        {
-          case 0:
-            puzzle.transform.localScale = new Vector3(8, 5, puzzle.transform.localScale.z);
-            break;
-          case 1:
-            puzzle.transform.localScale = new Vector3(6, 6, puzzle.transform.localScale.z);
-            break;
-          case 2:
-            puzzle.transform.localScale = new Vector3(5, 7, puzzle.transform.localScale.z);
-            break;
-          // Добавьте другие случаи, если необходимо для большего количества текстур
-        }*/
-
             SetSize();
-
             Restart();
+            UpdateNetworkSettings();
         }
 
         private void SetSize()
@@ -116,87 +112,12 @@ namespace Jigsaw.Scripts.Game
                     jigsawPuzzle.size = new Vector2(25, 15);
                     break;
             }
-
-
-            /*switch (puzzleImageIndex)
-        {
-          case 0:
-            switch (sizeMode)
-            {
-              case 1:
-                jigsawPuzzle.size = new Vector2(3, 2);
-                break;
-              case 2:
-                jigsawPuzzle.size = new Vector2(4, 3);
-                break;
-              case 3:
-                jigsawPuzzle.size = new Vector2(6, 4);
-                break;
-              case 4:
-                jigsawPuzzle.size = new Vector2(8, 6);
-                break;
-              case 5:
-                jigsawPuzzle.size = new Vector2(12, 8);
-                break;
-              case 6:
-                jigsawPuzzle.size = new Vector2(25, 15);
-                break;
-            }
-
-            break;
-          case 1:
-            switch (sizeMode)
-            {
-              case 1:
-                jigsawPuzzle.size = new Vector2(3, 3);
-                break;
-              case 2:
-                jigsawPuzzle.size = new Vector2(4, 4);
-                break;
-              case 3:
-                jigsawPuzzle.size = new Vector2(6, 6);
-                break;
-              case 4:
-                jigsawPuzzle.size = new Vector2(8, 8);
-                break;
-              case 5:
-                jigsawPuzzle.size = new Vector2(12, 12);
-                break;
-              case 6:
-                jigsawPuzzle.size = new Vector2(25, 25);
-                break;
-            }
-
-            break;
-          case 2:
-            switch (sizeMode)
-            {
-              case 1:
-                jigsawPuzzle.size = new Vector2(2, 3);
-                break;
-              case 2:
-                jigsawPuzzle.size = new Vector2(3, 4);
-                break;
-              case 3:
-                jigsawPuzzle.size = new Vector2(4, 6);
-                break;
-              case 4:
-                jigsawPuzzle.size = new Vector2(6, 8);
-                break;
-              case 5:
-                jigsawPuzzle.size = new Vector2(8, 12);
-                break;
-              case 6:
-                jigsawPuzzle.size = new Vector2(25, 25);
-                break;
-            }
-
-            break;
-        }*/
         }
 
         private void Pieces()
         {
+            if (Unity.Netcode.NetworkManager.Singleton != null && !Unity.Netcode.NetworkManager.Singleton.IsHost) return;
+
             // Логика изменения размеров пазла
             sizeMode++;
 
@@ -206,10 +127,13 @@ namespace Jigsaw.Scripts.Game
             else if (sizeMode == 7) sizeMode = 1;
 
             SetSize();
+            UpdateNetworkSettings();
         }
 
         private void Restart()
         {
+            if (Unity.Netcode.NetworkManager.Singleton != null && !Unity.Netcode.NetworkManager.Singleton.IsHost && Unity.Netcode.NetworkManager.Singleton.IsConnectedClient) return;
+
             // Случайное начальное положение верхней левой части пазла
             var topLeft = "" + ((int)Mathf.Floor(Random.value * 5) + 1) + ((int)Mathf.Floor(Random.value * 5) + 1);
 
@@ -218,6 +142,7 @@ namespace Jigsaw.Scripts.Game
 
             // Устанавливаем верхнюю левую часть пазла, чтобы перезапуск был принудительным
             jigsawPuzzle.topLeftPiece = topLeft;
+            UpdateNetworkSettings();
         }
 
         private string DispTime()
