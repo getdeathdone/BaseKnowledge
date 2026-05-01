@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -9,6 +10,18 @@ namespace Jigsaw.Scripts.UI
     /// </summary>
     public class MainMenu : MonoBehaviour
     {
+        private void Awake()
+        {
+            Application.targetFrameRate = 60;
+            
+            Screen.orientation = ScreenOrientation.LandscapeRight; 
+            Screen.autorotateToLandscapeLeft = true; 
+            Screen.autorotateToLandscapeRight = true; 
+            Screen.autorotateToPortrait = false; 
+            Screen.autorotateToPortraitUpsideDown = false; 
+            Screen.orientation = ScreenOrientation.AutoRotation; 
+        }
+
         // Метод для кнопки "Играть" (Обычная игра)
         // Загружает сцену под номером 1
         public void PlayOffline()
