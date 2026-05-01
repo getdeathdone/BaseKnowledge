@@ -24,6 +24,7 @@ namespace Jigsaw.Networking
         [SerializeField] private Button _refreshButton;
         
         [SerializeField] private GameObject _mainPanel; // Acts as lobby root
+        [SerializeField] private GameObject _uiPanel; // Acts as lobby root
         [SerializeField] private GameObject _loadingOverlay;
         [SerializeField] private TMP_Text _statusLabel;
         [SerializeField] private RectTransform _roomListRoot;
@@ -68,7 +69,11 @@ namespace Jigsaw.Networking
             if (string.IsNullOrEmpty(code)) return;
 
             SetLoading(true);
-            if (await _bootstrap.JoinRoom(code)) _mainPanel.SetActive(false);
+            if (await _bootstrap.JoinRoom(code))
+            {
+                _mainPanel.SetActive(false);
+                _uiPanel.SetActive(false);
+            };
             SetLoading(false);
         }
 
@@ -139,6 +144,7 @@ namespace Jigsaw.Networking
             btnText.text = "Join";
             btnText.alignment = TextAlignmentOptions.Center;
             btnText.color = Color.black;
+            btnText.fontSize = 18;
 
             btn.onClick.AddListener(() => OnJoinByIdClicked(room.Id).Forget());
         }
@@ -146,7 +152,11 @@ namespace Jigsaw.Networking
         private async UniTaskVoid OnJoinByIdClicked(string lobbyId)
         {
             SetLoading(true);
-            if (await _bootstrap.JoinRoomById(lobbyId)) _mainPanel.SetActive(false);
+            if (await _bootstrap.JoinRoomById(lobbyId))
+            {
+                _mainPanel.SetActive(false);
+                _uiPanel.SetActive(false);
+            }
             SetLoading(false);
         }
 

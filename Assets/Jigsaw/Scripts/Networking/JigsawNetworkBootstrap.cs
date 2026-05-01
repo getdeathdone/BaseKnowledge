@@ -48,6 +48,7 @@ namespace Jigsaw.Networking
             }
 
             _createdLobbyAsHost = true;
+            SetLandscapeOrientation();
             StatusChanged?.Invoke($"Host ready. Code: {lobby.LobbyCode}");
             return true;
         }
@@ -72,6 +73,7 @@ namespace Jigsaw.Networking
             }
 
             _createdLobbyAsHost = true;
+            SetLandscapeOrientation();
             StatusChanged?.Invoke($"Server ready. Code: {lobby.LobbyCode}");
             return true;
         }
@@ -96,6 +98,7 @@ namespace Jigsaw.Networking
                     await LobbyProvider.LeaveLobbyAsync();
                     return false;
                 }
+                SetLandscapeOrientation();
                 StatusChanged?.Invoke("Connected.");
                 return true;
             }
@@ -125,9 +128,21 @@ namespace Jigsaw.Networking
                     await LobbyProvider.LeaveLobbyAsync();
                     return false;
                 }
+                SetLandscapeOrientation();
                 return true;
             }
             return false;
+        }
+
+        private void SetLandscapeOrientation()
+        {
+            Debug.Log("Setting orientation to Landscape...");
+            Screen.orientation = ScreenOrientation.LandscapeRight; 
+            Screen.autorotateToLandscapeLeft = true; 
+            Screen.autorotateToLandscapeRight = true; 
+            Screen.autorotateToPortrait = false; 
+            Screen.autorotateToPortraitUpsideDown = false; 
+            Screen.orientation = ScreenOrientation.AutoRotation; 
         }
 
         private void OnDestroy()
